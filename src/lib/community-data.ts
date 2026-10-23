@@ -10,7 +10,7 @@ export type Member = {
 };
 
 export const members: Record<string, Member> = {
-  priya: { id: "priya", name: "Sayali D.", handle: "sayali_d", initials: "SD", color: "#FF4500", program: "MBA '29", from: "Mumbai, IN" },
+  priya: { id: "priya", name: "Sayali Dhale", handle: "sayali_d", initials: "SD", color: "#FF4500", program: "MBA '29", from: "Mumbai, IN" },
   arjun: { id: "arjun", name: "Arjun Mehta", handle: "arjun.m", initials: "AM", color: "#2563EB", program: "MBA '29", from: "Bengaluru, IN" },
   sofia: { id: "sofia", name: "Sofia Alvarez", handle: "sofi_alv", initials: "SA", color: "#DB2777", program: "MBA '29", from: "Bogotá, CO" },
   kenji: { id: "kenji", name: "Kenji Watanabe", handle: "kenjiw", initials: "KW", color: "#0F766E", program: "MBA '29", from: "Tokyo, JP" },

@@ -58,7 +58,7 @@ export default function InvitePage() {
             {[
               { icon: CalendarDays, k: "Intake", v: `${school.program} · ${school.term}` },
               { icon: Clock, k: "Program starts", v: "September 20, 2027" },
-              { icon: MailCheck, k: "Invited as", v: "sayali.d@gmail.com" },
+              { icon: MailCheck, k: "Invited as", v: "sayali.dhale@afteradmit.com" },
               { icon: ShieldCheck, k: "Invite expires", v: "in 12 days" },
             ].map((r) => (
               <div key={r.k} className="bg-white p-4">
@@ -102,7 +102,7 @@ export default function InvitePage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="em">Email</Label>
-              <Input id="em" defaultValue="sayali.d@gmail.com" readOnly className="bg-muted/50 text-muted-foreground" />
+              <Input id="em" defaultValue="sayali.dhale@afteradmit.com" readOnly className="bg-muted/50 text-muted-foreground" />
               <p className="text-[11.5px] text-subtle">Verified against your university invite.</p>
             </div>
             <div className="space-y-1.5">

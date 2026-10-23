@@ -28,7 +28,7 @@ export function Faq() {
             Can&apos;t find what you&apos;re looking for? Our team usually replies within a few hours.
           </p>
           <Button asChild variant="outline" className="mt-6 rounded-full px-5">
-            <Link href="mailto:hello@afteradmit.com">hello@afteradmit.com</Link>
+            <Link href="mailto:info@afteradmit.com">info@afteradmit.com</Link>
           </Button>
         </div>
         <ul className="divide-y border-y">

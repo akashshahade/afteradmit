@@ -41,7 +41,7 @@ export default async function JobPage({ params }: PageProps<"/careers/[slug]">) 
   const job = getJob(slug);
   if (!job) notFound();
 
-  const apply = `mailto:careers@afteradmit.com?subject=${encodeURIComponent(`Application: ${job.title}`)}`;
+  const apply = `mailto:info@afteradmit.com?subject=${encodeURIComponent(`Application: ${job.title}`)}`;
   const facts = [
     { icon: MapPin, label: "Location", value: job.location },
     { icon: Briefcase, label: "Type", value: `${job.type} · ${job.team}` },

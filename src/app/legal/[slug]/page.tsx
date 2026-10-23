@@ -68,7 +68,7 @@ const content: Record<LegalSlug, { updated: string; intro: string; sections: [st
       ["Encryption", "TLS 1.2+ in transit and AES-256 at rest."],
       ["Access control", "Role-based access checks on every API endpoint, SSO and MFA for staff, and least-privilege production access."],
       ["Monitoring", "Continuous logging, alerting and annual third-party penetration testing."],
-      ["Disclosure", "Found a vulnerability? Email security@afteradmit.com — we respond within one business day."],
+      ["Disclosure", "Found a vulnerability? Email info@afteradmit.com — we respond within one business day."],
     ],
   },
   accessibility: {
@@ -76,10 +76,22 @@ const content: Record<LegalSlug, { updated: string; intro: string; sections: [st
     intro: "AfterAdmit should work for every admitted student.",
     sections: [
       ["Standard", "We design to WCAG 2.2 AA: keyboard navigation, visible focus, sufficient contrast and screen-reader labels."],
-      ["Feedback", "If something isn't accessible to you, email accessibility@afteradmit.com and we'll respond within two business days."],
+      ["Feedback", "If something isn't accessible to you, email info@afteradmit.com and we'll respond within two business days."],
     ],
   },
 };
+
+function linkEmails(text: string) {
+  return text.split(/(info@afteradmit\.com|legal@afteradmit\.com|privacy@afteradmit\.com)/g).map((part, i) =>
+    part.includes("@") ? (
+      <a key={i} href={`mailto:${part}`} className="font-medium text-foreground underline-offset-4 hover:underline">
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
 
 export function generateStaticParams() {
   return Object.keys(legalPages).map((slug) => ({ slug }));
@@ -95,6 +107,7 @@ export default async function LegalPage({ params }: PageProps<"/legal/[slug]">) 
   if (!(slug in legalPages)) notFound();
   const key = slug as LegalSlug;
   const page = content[key];
+  const pageEmail = key === "privacy" ? "privacy@afteradmit.com" : "legal@afteradmit.com";
 
   return (
     <div className="bg-white">
@@ -125,12 +138,13 @@ export default async function LegalPage({ params }: PageProps<"/legal/[slug]">) 
             {page.sections.map(([h, b]) => (
               <section key={h}>
                 <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-ink">{h}</h2>
-                <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{b}</p>
+                <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{linkEmails(b)}</p>
               </section>
             ))}
           </div>
           <div className="mt-14 rounded-2xl border p-5 text-[14px] text-muted-foreground">
-            Questions about this page? Email <a href="mailto:legal@afteradmit.com" className="font-medium text-foreground underline-offset-4 hover:underline">legal@afteradmit.com</a>.
+            Questions about this page? Email{" "}
+            <a href={`mailto:${pageEmail}`} className="font-medium text-foreground underline-offset-4 hover:underline">{pageEmail}</a>.
           </div>
         </article>
       </main>

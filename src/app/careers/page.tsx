@@ -52,8 +52,8 @@ export default function CareersPage() {
 
         <div className="mt-16 flex flex-col gap-2 border-t pt-8 text-[14.5px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <span>Don&apos;t see your role? We&apos;re always glad to hear from people who care about students.</span>
-          <a href="mailto:careers@afteradmit.com?subject=Open%20application" className="shrink-0 font-medium text-ink underline-offset-4 hover:underline">
-            careers@afteradmit.com
+          <a href="mailto:info@afteradmit.com?subject=Open%20application" className="shrink-0 font-medium text-ink underline-offset-4 hover:underline">
+            info@afteradmit.com
           </a>
         </div>
       </section>

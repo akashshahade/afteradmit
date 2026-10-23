@@ -23,7 +23,7 @@ export type Ticket = {
 
 export const categories = ["Roadmap & milestones", "Account & billing", "Community", "Marketplace & partners", "Technical issue", "Something else"];
 
-const sayali = { name: "Sayali D.", email: "sayali.d@gmail.com", initials: "SD", color: "#FF4500", org: "UCLA Anderson", kind: "Student" as const };
+const sayali = { name: "Sayali Dhale", email: "sayali.dhale@afteradmit.com", initials: "SD", color: "#FF4500", org: "UCLA Anderson", kind: "Student" as const };
 
 let tickets: Ticket[] = [
   {
@@ -59,7 +59,7 @@ let tickets: Ticket[] = [
     assignee: "Priya Raman",
     updated: "Yesterday",
     messages: [
-      { from: "requester", name: "Sayali D.", body: "I got the 'Housing deposit due' reminder twice this morning, a few minutes apart. Not a big deal, just letting you know.", time: "2d ago" },
+      { from: "requester", name: "Sayali Dhale", body: "I got the 'Housing deposit due' reminder twice this morning, a few minutes apart. Not a big deal, just letting you know.", time: "2d ago" },
       { from: "agent", name: "Priya Raman", body: "Thanks for flagging, Sayali! We found a duplicate schedule for one milestone and have fixed it. Could you let us know if you get another duplicate this week?", time: "Yesterday" },
     ],
   },
@@ -100,7 +100,7 @@ let tickets: Ticket[] = [
     assignee: "Priya Raman",
     updated: "May 6",
     messages: [
-      { from: "requester", name: "Sayali D.", body: "The roadmap says 'I-20 received' but I can't see where to upload it.", time: "May 5" },
+      { from: "requester", name: "Sayali Dhale", body: "The roadmap says 'I-20 received' but I can't see where to upload it.", time: "May 5" },
       { from: "agent", name: "Priya Raman", body: "Good question — we never ask you to upload your I-20, for your privacy. Just mark the milestone done once you have it. ✓", time: "May 6" },
     ],
   },
@@ -125,7 +125,7 @@ export function createTicket(input: { subject: string; category: string; body: s
     input.owner === "partner"
       ? { name: "Northbridge Student Loans", email: "partners@northbridge.com", initials: "NB", color: "#1D4ED8", org: "Northbridge", kind: "Partner" as const }
       : input.owner === "admin"
-        ? { name: "AfterAdmit Admin", email: "ops@afteradmit.com", initials: "AA", color: "#18181B", org: "AfterAdmit", kind: "University" as const }
+        ? { name: "AfterAdmit Admin", email: "info@afteradmit.com", initials: "AA", color: "#18181B", org: "AfterAdmit", kind: "University" as const }
         : sayali;
   const ticket: Ticket = {
     id: `AA-${next++}`,

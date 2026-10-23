@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Clock, Handshake, LifeBuoy, MapPin, Newspaper, Sparkles } from "lucide-react";
+import { ArrowRight, Clock, MapPin, Scale, Shield, Sparkles } from "lucide-react";
 
 import { PageHero, PageShell } from "@/components/marketing/page-shell";
 import { ContactForm } from "@/components/site/contact-form";
@@ -11,10 +11,9 @@ export const metadata: Metadata = {
 };
 
 const channels = [
-  { icon: Sparkles, title: "Sales & demos", body: "For admissions and enrollment teams", email: "hello@afteradmit.com" },
-  { icon: LifeBuoy, title: "Student support", body: "Help with your roadmap or account", email: "support@afteradmit.com" },
-  { icon: Handshake, title: "Partnerships", body: "Loans, housing, banking and more", email: "partners@afteradmit.com" },
-  { icon: Newspaper, title: "Press", body: "Media enquiries and press kit", email: "press@afteradmit.com" },
+  { icon: Sparkles, title: "AfterAdmit", body: "Demos, student support, partnerships and press", email: "info@afteradmit.com" },
+  { icon: Scale, title: "Legal", body: "Contracts, terms and data processing", email: "legal@afteradmit.com" },
+  { icon: Shield, title: "Privacy", body: "Privacy requests and your data", email: "privacy@afteradmit.com" },
 ];
 
 export default function ContactPage() {
@@ -33,7 +32,7 @@ export default function ContactPage() {
           <aside className="space-y-4">
             <div className="divide-y rounded-[24px] border">
               {channels.map(({ icon: Icon, title, body, email }) => (
-                <a key={email} href={`mailto:${email}`} className="group flex items-start gap-4 p-5 transition-colors first:rounded-t-[24px] last:rounded-b-[24px] hover:bg-[#FAFAFA]">
+                <a key={title} href={`mailto:${email}`} className="group flex items-start gap-4 p-5 transition-colors first:rounded-t-[24px] last:rounded-b-[24px] hover:bg-[#FAFAFA]">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
                     <Icon className="size-[18px]" />
                   </span>

@@ -187,7 +187,7 @@ export default function ModerationPage() {
             {[
               ["Daniel Kim", "removed a comment", "Roommates", "Spam / self-promotion", "1h"],
               ["AfterAdmit Team", "locked a post", "Anderson Fall '27", "Announcement", "2d"],
-              ["Sayali D.", "pinned a post", "Roommates", "Roommate spreadsheet", "3d"],
+              ["Sayali Dhale", "pinned a post", "Roommates", "Roommate spreadsheet", "3d"],
               ["AfterAdmit Team", "banned @party_la", "Westwood Life", "Repeated spam", "4d"],
             ].map(([who, what, where, why, when]) => (
               <li key={who + what} className="flex items-center gap-3 px-5 py-3 text-[13px]">

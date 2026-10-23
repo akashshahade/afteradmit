@@ -26,10 +26,10 @@ export const school = {
 
 export const student = {
   id: "stu_sayali",
-  name: "Sayali D.",
+  name: "Sayali Dhale",
   firstName: "Sayali",
   initials: "SD",
-  email: "sayali.d@gmail.com",
+  email: "sayali.dhale@afteradmit.com",
   schoolEmail: "sayali.d.2029@anderson.ucla.edu",
   avatarColor: "#FF4500",
   profile: {

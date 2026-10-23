@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const demoAccounts = [
-  { key: "student", label: "Student", name: "Sayali D.", email: "sayali.d@gmail.com", href: "/student", icon: GraduationCap, desc: "UCLA Anderson · MBA Fall '27" },
+  { key: "student", label: "Student", name: "Sayali Dhale", email: "sayali.dhale@afteradmit.com", href: "/student", icon: GraduationCap, desc: "UCLA Anderson · MBA Fall '27" },
   { key: "admin", label: "AfterAdmit Admin", name: "Jordan Lee", email: "jordan@afteradmit.com", href: "/admin", icon: ShieldCheck, desc: "Universities, content, leads" },
   { key: "partner", label: "Partner", name: "Elena Ruiz", email: "elena@westwoodcommons.com", href: "/partner", icon: Store, desc: "Westwood Commons · Housing" },
 ] as const;

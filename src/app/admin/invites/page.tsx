@@ -21,7 +21,7 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_ROWS = 5000;
 
 const tracking = [
-  { name: "Sayali D.", email: "sayali.d@gmail.com", sent: "Apr 28", status: "Joined" },
+  { name: "Sayali Dhale", email: "sayali.dhale@afteradmit.com", sent: "Apr 28", status: "Joined" },
   { name: "Arjun Mehta", email: "arjun.m@gmail.com", sent: "Apr 28", status: "Joined" },
   { name: "Sofia Alvarez", email: "sofia.alvarez@gmail.com", sent: "Apr 28", status: "Joined" },
   { name: "Rohan Iyer", email: "rohan.iyer@outlook.com", sent: "Apr 28", status: "Opened" },
@@ -46,7 +46,7 @@ const sample = [
   ["Grace Kim", "grace.kim@gmail.com"],
   ["Wei Zhang", "wei.zhang@outlook.com"],
   ["Oluwaseun Adeyemi", "seun.adeyemi@gmail.com"],
-  ["Sayali D.", "sayali.d@gmail.com"],
+  ["Sayali Dhale", "sayali.dhale@afteradmit.com"],
   ["Hannah Müller", "hannah.mueller@web.de"],
 ].map(([name, email]) => ({ name, email, program: "MBA", intake: "Fall 2027" }));
 

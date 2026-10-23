@@ -418,7 +418,7 @@ function BillingTab() {
   const [current, setCurrent] = React.useState("free");
   const [form, setForm] = React.useState<FormSheetConfig | null>(null);
   const cardFields = (last4?: string): FormSheetConfig["fields"] => [
-    { name: "name", label: "Name on card", defaultValue: last4 ? "Sayali D." : "", required: true },
+    { name: "name", label: "Name on card", defaultValue: last4 ? "Sayali Dhale" : "", required: true },
     { name: "number", label: "Card number", placeholder: last4 ? `•••• •••• •••• ${last4}` : "1234 1234 1234 1234", required: !last4 },
     { name: "exp", label: "Expiry (MM/YY)", defaultValue: last4 ? "08/29" : "", placeholder: "MM/YY", required: true },
     { name: "default", label: "Set as default", type: "switch", defaultValue: true },
@@ -492,7 +492,7 @@ function BillingTab() {
         <div className="grid max-w-xl gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Billing name</Label>
-            <Input defaultValue="Sayali D." />
+            <Input defaultValue="Sayali Dhale" />
           </div>
           <div className="space-y-1.5">
             <Label>Billing email</Label>
@@ -539,7 +539,7 @@ function BillingTab() {
                       onClick={() => {
                         downloadFile(
                           `AfterAdmit-receipt-${id}.txt`,
-                          [`AfterAdmit, Inc. — Receipt ${id}`, `Date: ${d}`, `Billed to: Sayali D. (${student.email})`, `Item: ${desc}`, `Amount paid: ${amt}`, "Status: Paid"].join("\n"),
+                          [`AfterAdmit, Inc. — Receipt ${id}`, `Date: ${d}`, `Billed to: Sayali Dhale (${student.email})`, `Item: ${desc}`, `Amount paid: ${amt}`, "Status: Paid"].join("\n"),
                           "text/plain;charset=utf-8",
                         );
                         toast.success("Receipt downloaded", { description: id });
@@ -611,7 +611,7 @@ function ConnectionsTab() {
     <Section title="Connected accounts" description="Sign in faster and import details.">
       <ul className="divide-y">
         {[
-          { n: "Google", d: "sayali.d@gmail.com", on: true, c: "#4285F4", l: "G" },
+          { n: "Google", d: "sayali.dhale@afteradmit.com", on: true, c: "#4285F4", l: "G" },
           { n: "LinkedIn", d: "Show your profile on posts", on: false, c: "#0A66C2", l: "in" },
           { n: "Google Calendar", d: "Sync milestone due dates", on: true, c: "#18181B", l: "31" },
           { n: "WhatsApp", d: "Get deadline reminders", on: false, c: "#25D366", l: "W" },

@@ -47,11 +47,7 @@ const guides: Record<Role, string[]> = {
   partner: ["Writing a listing that converts", "Understanding lead reports", "Billing & invoices", "Partner community guidelines"],
 };
 
-const supportEmail: Record<Role, string> = {
-  student: "support@afteradmit.com",
-  admin: "ops@afteradmit.com",
-  partner: "partners@afteradmit.com",
-};
+const supportEmail = "info@afteradmit.com";
 
 const shortcuts = [
   { k: "⌘ K", l: "Search anything" },
@@ -108,7 +104,7 @@ export function HelpSheet({ open, onOpenChange, role }: { open: boolean; onOpenC
             <div className="grid grid-cols-3 gap-2">
               {[
                 { i: MessageCircle, l: "Live chat", d: "~2 min", on: () => toast("Connecting you to support…", { description: "A teammate will join shortly." }) },
-                { i: Mail, l: "Email", d: "< 2 hours", on: () => toast("Opening your email app", { description: supportEmail[role] }) },
+                { i: Mail, l: "Email", d: "< 2 hours", on: () => { window.location.href = `mailto:${supportEmail}`; } },
                 { i: CalendarClock, l: role === "student" ? "Book a call" : "Schedule call", d: role === "student" ? "Plus" : "15 min", on: () => toast("Opening scheduling") },
               ].map((c) => (
                 <button key={c.l} onClick={c.on} className="flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3.5 text-center transition-colors hover:border-[#d4d4d8] hover:bg-[#fcfcfc]">
@@ -120,7 +116,10 @@ export function HelpSheet({ open, onOpenChange, role }: { open: boolean; onOpenC
                 </button>
               ))}
             </div>
-            <p className="mt-2.5 text-[11.5px] text-muted-foreground">Support hours: Mon–Fri, 8am–8pm PT · {supportEmail[role]}</p>
+            <p className="mt-2.5 text-[11.5px] text-muted-foreground">
+              Support hours: Mon–Fri, 8am–8pm PT ·{" "}
+              <a href={`mailto:${supportEmail}`} className="font-medium text-foreground underline-offset-4 hover:underline">{supportEmail}</a>
+            </p>
           </section>
 
           <section>
