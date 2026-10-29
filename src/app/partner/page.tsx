@@ -35,7 +35,7 @@ export default function PartnerOverview() {
       <div data-tour="kpis" className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Leads this month" value={formatNumber(241)} delta={28.2} hint="vs May" icon={MousePointerClick} spark={partnerTrend.map((d) => d.clicks)} />
         <KpiCard label="Click-through rate" value="5.6%" delta={0.8} hint="from milestone views" icon={Percent} />
-        <KpiCard label="Spend (pay-per-lead)" value="$4,338" hint={`$${partner.cpl} per lead`} icon={Wallet} />
+        <KpiCard label="Spend (pay-per-lead)" value="$1,928" hint={`$${partner.cpl} per lead · housing`} icon={Wallet} />
         <KpiCard label="Active listings" value={`${listings.filter((l) => l.status === "Live").length} of ${listings.length}`} hint="1 in review" icon={Store} />
       </div>
 

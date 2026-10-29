@@ -62,9 +62,9 @@ function Shell({ children }: { children: React.ReactNode }) {
   const footer = (
     <div className="rounded-xl border bg-white p-3">
       <div className="flex items-center gap-1.5 text-[12.5px] font-semibold">
-        <Sparkles className="size-3.5 text-primary" /> AfterAdmit Plus
+        <Sparkles className="size-3.5 text-primary" /> Concierge · $149/mo
       </div>
-      <p className="mt-1 text-[11.5px] leading-snug text-muted-foreground">1:1 advisor calls, document reviews, and priority support.</p>
+      <p className="mt-1 text-[11.5px] leading-snug text-muted-foreground">1:1 support on top of the roadmap. Everything else stays included.</p>
       <Button asChild size="xs" variant="ink" className="mt-2.5 w-full">
         <Link href="/student/profile?tab=billing">Upgrade</Link>
       </Button>

@@ -23,7 +23,7 @@ const faqs: Record<Role, Faq[]> = {
     { q: "What happens when I click a provider?", a: "We open the provider's site in a new tab and record an anonymous click. Nothing is purchased in AfterAdmit and your contact details are never shared — you choose what to share with them." },
     { q: "A milestone doesn't apply to me. What do I do?", a: "Open the milestone and choose “Not applicable to me”. It's removed from your progress, and you can make it applicable again anytime." },
     { q: "Who do I ask about a deadline or my visa?", a: "Every milestone lists the right school office. For peer advice, ask in the F-1 & Visa or Anderson Fall '27 spaces." },
-    { q: "Do I need AfterAdmit Plus?", a: "No. Everything on your roadmap is free through your school. Plus adds 1:1 advisor calls and document reviews." },
+    { q: "Do I need Concierge?", a: "No. Everything on your roadmap is free through your school. Concierge is $149 per month and adds 1:1 support on top of the roadmap." },
   ],
   admin: [
     { q: "How do I onboard a new university?", a: "Universities → Add university. Set branding and email domain, create the intake term and anchor dates, copy the master template, assign providers, then invite the school's admins." },
@@ -33,7 +33,7 @@ const faqs: Record<Role, Faq[]> = {
     { q: "How does moderation work?", a: "Reports land in Moderation → Mod queue. Approve, remove or ban from there; every action is recorded in the mod log." },
   ],
   partner: [
-    { q: "How am I billed?", a: "Pay-per-lead at $18 per click-through, invoiced monthly. You can set a monthly cap in Billing." },
+    { q: "How am I billed?", a: "Pay-per-lead, from $1 to $15 per click-through depending on category, invoiced monthly. You can set a monthly cap in Billing." },
     { q: "Why is my listing “In review”?", a: "New listings and edits are checked by AfterAdmit before going live — usually within 1 business day." },
     { q: "Can I see who clicked my listing?", a: "No. Lead events are anonymous. Students choose what to share with you on your own site." },
     { q: "How do I appear on more milestones?", a: "Request placements when editing a listing. AfterAdmit decides final placement per university." },
@@ -105,7 +105,7 @@ export function HelpSheet({ open, onOpenChange, role }: { open: boolean; onOpenC
               {[
                 { i: MessageCircle, l: "Live chat", d: "~2 min", on: () => toast("Connecting you to support…", { description: "A teammate will join shortly." }) },
                 { i: Mail, l: "Email", d: "< 2 hours", on: () => { window.location.href = `mailto:${supportEmail}`; } },
-                { i: CalendarClock, l: role === "student" ? "Book a call" : "Schedule call", d: role === "student" ? "Plus" : "15 min", on: () => toast("Opening scheduling") },
+                { i: CalendarClock, l: role === "student" ? "Book a call" : "Schedule call", d: role === "student" ? "$149/mo" : "15 min", on: () => toast("Opening scheduling") },
               ].map((c) => (
                 <button key={c.l} onClick={c.on} className="flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3.5 text-center transition-colors hover:border-[#d4d4d8] hover:bg-[#fcfcfc]">
                   <span className="flex size-8 items-center justify-center rounded-lg bg-primary-soft text-primary">

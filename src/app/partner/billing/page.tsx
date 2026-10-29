@@ -44,14 +44,14 @@ export default function PartnerBilling() {
         </div>
         <div className="rounded-2xl border bg-white p-6">
           <div className="text-[12.5px] font-medium text-muted-foreground">July so far</div>
-          <div className="tabular mt-1 text-[28px] font-semibold tracking-tight">$1,260.00</div>
+          <div className="tabular mt-1 text-[28px] font-semibold tracking-tight">$560.00</div>
           <div className="text-[12.5px] text-muted-foreground">70 leads · 8 days</div>
           <div className="mt-5">
             <div className="flex justify-between text-[12px]">
               <span className="text-muted-foreground">Monthly cap</span>
-              <span className="tabular font-medium">$1,260 / ${cap.toLocaleString("en-US")}</span>
+              <span className="tabular font-medium">$560 / ${cap.toLocaleString("en-US")}</span>
             </div>
-            <Progress value={Math.min(100, (1260 / cap) * 100)} className="mt-1.5" />
+            <Progress value={Math.min(100, (560 / cap) * 100)} className="mt-1.5" />
           </div>
           <Button
             variant="outline"

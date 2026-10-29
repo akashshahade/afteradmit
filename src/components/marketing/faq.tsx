@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 
 const faqs = [
   { q: "Who is AfterAdmit for?", a: "Universities that want every admitted student to arrive ready. The school brings AfterAdmit to its incoming class; students join through their school's invite." },
-  { q: "Is it free for students?", a: "Yes. Your school covers everything on your roadmap. An optional Plus plan adds 1:1 advisor calls and document reviews." },
+  { q: "Is it free for students?", a: "Yes. Your school pays $50 per admitted student, so the roadmap is free. Optional Concierge is $149 per month for students who want 1:1 support." },
   { q: "What can my school see?", a: "Aggregate progress for the whole class — sign-up rate, completion by stage and who's behind on key deadlines, in aggregate. Never your individual milestones, posts, messages or partner clicks." },
   { q: "Does it work for domestic students too?", a: "Yes. The roadmap adapts to your answers — domestic students simply never see visa or international-only steps." },
   { q: "How long does it take a school to launch?", a: "Most teams go live in under a week: confirm term dates, adjust school-specific guidance, upload a CSV of admits, and send invites." },

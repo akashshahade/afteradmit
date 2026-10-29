@@ -11,7 +11,7 @@ import { partner } from "@/lib/ops-data";
 const notifications = [
   { id: "p1", title: "Listing in review", body: "“Studio · Levering Ave” is being reviewed by AfterAdmit.", time: "20m", unread: true },
   { id: "p2", title: "21 new leads yesterday", body: "Most came from the “Lease signed” milestone.", time: "9h", unread: true },
-  { id: "p3", title: "June invoice available", body: "INV-0042 · 241 leads · $4,338.00", time: "2d", unread: false },
+  { id: "p3", title: "June invoice available", body: "INV-0042 · 241 leads · $1,928.00", time: "2d", unread: false },
 ];
 
 const sections: NavSection[] = [

@@ -15,7 +15,7 @@ export const helpTopics: HelpTopic[] = [
   { id: "visa", audience: "students", title: "Visa & documents", body: "I-20, SEVIS and what we store" },
   { id: "community", audience: "students", title: "Community & messages", body: "Spaces, posts and safety" },
   { id: "marketplace", audience: "students", title: "Marketplace", body: "Partners, perks and privacy" },
-  { id: "account", audience: "students", title: "Account & billing", body: "Profile, Plus plan and data" },
+  { id: "account", audience: "students", title: "Account & billing", body: "Profile, Concierge and data" },
   { id: "setup", audience: "universities", title: "Setting up", body: "Templates, dates and branding" },
   { id: "invites", audience: "universities", title: "Inviting your class", body: "CSV uploads and activation" },
   { id: "insights", audience: "universities", title: "Class insights", body: "Progress, stages and exports" },
@@ -27,7 +27,7 @@ export const helpTopics: HelpTopic[] = [
 
 export const helpArticles: HelpArticle[] = [
   { id: "join", topic: "getting-started", q: "How do I join AfterAdmit?", a: "AfterAdmit is offered through your university. Once you've accepted your offer, your school sends you an invite email — open it on any device to create your account. If you can't find it, check your spam folder or ask your admissions office to resend it." },
-  { id: "free", topic: "getting-started", q: "Is AfterAdmit free for students?", a: "Yes. Your school covers everything on your roadmap. An optional Plus plan adds one-to-one advisor calls and document reviews." },
+  { id: "free", topic: "getting-started", q: "Is AfterAdmit free for students?", a: "Yes. Your school pays $50 per admitted student, so the roadmap is free. Optional Concierge is $149 per month for one-to-one support." },
   { id: "onboarding", topic: "getting-started", q: "Why does onboarding ask about my visa and family?", a: "Five short questions let us personalize your roadmap. Domestic students never see visa steps, and steps like dependent visas only appear if they apply to you. You can change your answers anytime in your profile." },
   { id: "dates", topic: "roadmap", q: "Where do my deadlines come from?", a: "Every date on your roadmap comes from your school's real deadlines, set by its admissions and student services teams. If a date changes, your roadmap updates automatically." },
   { id: "complete", topic: "roadmap", q: "How do I mark a milestone as done?", a: "Open the milestone from your roadmap or Home and tap 'Mark as done'. Some milestones ask for a quick confirmation, like the date you paid a fee. You can undo it at any time." },
@@ -40,7 +40,7 @@ export const helpArticles: HelpArticle[] = [
   { id: "dm", topic: "community", q: "Can I message other students privately?", a: "Yes. Open a member's profile and choose 'Message'. Never share passport, visa or bank details with someone you haven't met." },
   { id: "vetted", topic: "marketplace", q: "How are partners chosen?", a: "Every partner is reviewed by AfterAdmit for fit, pricing transparency and student reviews before being listed." },
   { id: "share", topic: "marketplace", q: "Do partners get my contact details?", a: "Never. Opening a partner takes you to their website, and you decide what to share there. AfterAdmit records only an anonymous click." },
-  { id: "plus", topic: "account", q: "What's included in AfterAdmit Plus?", a: "One-to-one advisor calls, document reviews before key appointments and priority support. You can cancel anytime from Profile → Billing." },
+  { id: "plus", topic: "account", q: "What's included in Concierge?", a: "One-to-one support on top of the roadmap, at $149 per month. Everything else stays included. You can cancel anytime from Profile → Billing." },
   { id: "delete", topic: "account", q: "How do I download or delete my data?", a: "Go to Profile → Privacy & data. You can export everything as a file or permanently delete your account." },
   { id: "launch", topic: "setup", q: "How long does it take to launch?", a: "Most teams go live in under a week: confirm term dates, adjust school-specific guidance on our proven template, upload your class and send invites." },
   { id: "brand", topic: "setup", q: "Can we use our own branding and contacts?", a: "Yes. Add your logo, office contacts and links to your own pages. Students see them inside each relevant milestone." },
@@ -54,6 +54,6 @@ export const helpArticles: HelpArticle[] = [
   { id: "edit", topic: "listings", q: "Can we update an offer after it's live?", a: "Yes. Edits to copy and links go live immediately; changes to pricing or perks are re-reviewed to keep the marketplace trustworthy." },
   { id: "lead", topic: "leads", q: "What counts as a lead?", a: "A student opening your offer and continuing to your site. You see anonymous, aggregate counts by school and category — never personal details." },
   { id: "report-leads", topic: "leads", q: "Where can we see performance?", a: "The Overview page shows clicks, leads and conversion by week, with breakdowns by school and listing." },
-  { id: "invoice", topic: "partner-billing", q: "How does billing work?", a: "Plans are billed monthly or annually. Download invoices and update payment details from Billing in your Partner dashboard." },
+  { id: "invoice", topic: "partner-billing", q: "How does billing work?", a: "You pay per lead, from $1 to $15 depending on category, invoiced monthly for verified click-throughs. Download invoices and update payment details from Billing in your Partner dashboard." },
   { id: "cancel", topic: "partner-billing", q: "Can we pause or cancel?", a: "Yes. Pause listings anytime, or cancel at the end of your billing period from the Billing page." },
 ];

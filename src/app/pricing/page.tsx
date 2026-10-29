@@ -8,46 +8,50 @@ import { PageHero, PageShell } from "@/components/marketing/page-shell";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Simple per-admit pricing for universities, free for students, and performance-based plans for partners.",
+  description: "Universities pay $50 per admitted student. Students can add Concierge at $149 per month. Partners pay $1–$15 per lead.",
 };
 
 const plans = [
   {
-    name: "Pilot",
-    price: "Free",
-    unit: "first intake, up to 150 admits",
-    body: "Prove the impact with one program before you commit.",
-    cta: "Start a pilot",
-    features: ["Personal roadmaps for every admit", "Private class community", "Aggregate class insights", "CSV invites and email support"],
-  },
-  {
-    name: "Growth",
-    price: "$39",
-    unit: "per admitted student, per intake",
-    body: "For admissions teams running one or more programs.",
+    name: "School license",
+    price: "$50",
+    unit: "per admitted student, per admit cycle",
+    paidBy: "Paid by: University",
+    badge: "Primary",
+    body: "Every admitted student gets AfterAdmit free.",
     cta: "Book a demo",
+    href: "/contact?topic=university",
     featured: true,
-    features: ["Everything in Pilot", "Unlimited programs and intakes", "Your branding, dates and contacts", "SSO and webhooks", "Dedicated launch manager"],
+    features: ["Access from admit to on-campus onboarding", "Roadmap, class spaces and partners for every admit", "School dashboard with class progress by stage"],
   },
   {
-    name: "Enterprise",
-    price: "Custom",
-    unit: "university-wide agreements",
-    body: "For universities rolling out across schools and departments.",
-    cta: "Talk to sales",
-    features: ["Everything in Growth", "Slate and Salesforce sync", "Custom data agreements (DPA)", "SLA and priority support", "Quarterly impact reviews"],
+    name: "Concierge upgrade",
+    price: "$149",
+    unit: "per month, for students who opt in",
+    paidBy: "Paid by: Student",
+    badge: "Optional",
+    body: "Extra support on top of the free roadmap.",
+    cta: "See how it works",
+    href: "/contact?topic=student",
+    features: ["1:1 support on top of the roadmap", "Everything else stays included"],
   },
-];
-
-const others = [
-  { who: "Students", price: "Free", body: "Every roadmap, reminder and space is free for admitted students. Optional Plus — $12/month — adds 1:1 advisor calls and document reviews." },
-  { who: "Partners", price: "From $499/mo", body: "Vetted listings shown at the right milestone, plus pay-per-lead pricing. Student contact details are never shared." },
+  {
+    name: "Partner leads",
+    price: "$1–$15",
+    unit: "per lead, for each student referred to a partner",
+    paidBy: "Paid by: Partner",
+    badge: "Secondary",
+    body: "Partners pay only when a student clicks through.",
+    cta: "Become a partner",
+    href: "/contact?topic=partner",
+    features: ["Paid when a student clicks through to a vetted partner", "Loans, housing, banking, insurance and phone plans"],
+  },
 ];
 
 const faqs = [
-  { q: "How is the per-admit price counted?", a: "By the number of admitted students you invite in an intake. Students who withdraw before joining aren't counted." },
-  { q: "Is there a minimum?", a: "Growth plans have an annual minimum of $6,000 — about 150 admits." },
-  { q: "Can we pay from different budgets?", a: "Yes. Many schools split the cost between admissions, international services and student affairs. We can invoice each." },
+  { q: "How is the school license counted?", a: "At $50 for each admitted student in an admit cycle. Students who withdraw before joining aren't counted." },
+  { q: "What do students pay?", a: "Nothing for the roadmap, spaces, or partners. Concierge is optional at $149 per month, and only for students who opt in." },
+  { q: "What do partners pay?", a: "Between $1 and $15 per lead, charged when a student clicks through to a vetted partner. The fee is set per category during the pilot. Student contact details are never shared." },
 ];
 
 export default function PricingPage() {
@@ -57,9 +61,9 @@ export default function PricingPage() {
         <PageHero
           center
           eyebrow="Pricing"
-          title="Priced per admit."
-          muted="Paid back in arrivals."
-          description="Universities pay a simple per-student fee. Students never pay to use their roadmap. Partners pay to reach students at the right moment."
+          title="Universities pay, so every admitted student gets in free."
+          muted="Students can upgrade. Partners pay per lead."
+          description="A school license is $50 per admitted student. Concierge is $149 per month for students who want 1:1 support. Partners pay $1–$15 when a student clicks through."
         />
 
         <div className="mt-14 grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -67,9 +71,10 @@ export default function PricingPage() {
             <div key={p.name} className={cn("flex flex-col rounded-[24px] border p-7", p.featured ? "border-ink bg-ink text-white" : "bg-white")}>
               <div className="flex items-center justify-between">
                 <h2 className={cn("text-[16px] font-semibold", p.featured ? "text-white" : "text-ink")}>{p.name}</h2>
-                {p.featured && <span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-medium text-white">Most popular</span>}
+                <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", p.featured ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>{p.badge}</span>
               </div>
-              <div className="mt-6 flex items-baseline gap-2">
+              <div className={cn("mt-4 text-[12.5px]", p.featured ? "text-white/55" : "text-muted-foreground")}>{p.paidBy}</div>
+              <div className="mt-3 flex items-baseline gap-2">
                 <span className="tabular text-[44px] font-semibold leading-none tracking-[-0.04em]">{p.price}</span>
               </div>
               <div className={cn("mt-2 text-[13.5px]", p.featured ? "text-white/55" : "text-muted-foreground")}>{p.unit}</div>
@@ -83,7 +88,7 @@ export default function PricingPage() {
                 ))}
               </ul>
               <Button asChild variant={p.featured ? "default" : "outline"} size="lg" className="mt-8 w-full rounded-full">
-                <Link href="/contact?topic=university">
+                <Link href={p.href}>
                   {p.cta} <ArrowRight className="size-4" />
                 </Link>
               </Button>
@@ -91,17 +96,12 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-          {others.map((o) => (
-            <div key={o.who} className="rounded-[24px] border bg-[#FAFAFA] p-7">
-              <div className="flex items-baseline justify-between gap-4">
-                <h2 className="text-[16px] font-semibold text-ink">For {o.who.toLowerCase()}</h2>
-                <span className="tabular text-[15px] font-semibold text-ink">{o.price}</span>
-              </div>
-              <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">{o.body}</p>
-            </div>
-          ))}
+        <div className="mt-4 rounded-[24px] border border-primary/15 bg-primary-soft px-6 py-5 text-[14.5px] leading-relaxed text-ink">
+          <span className="font-semibold">Per admitted student:</span> $50 license + 32% who enroll × $26 from partners and concierge = $58.32. A school with ~950 admits ≈ $55K a year.
         </div>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
+          Assumptions: 32% yield (UCLA Anderson, Class of 2027), 3 partner leads per enrolling student at $8 average, 5% of enrolling students take concierge for 4 months. Lead fees set per category during the pilot.
+        </p>
       </section>
 
       <section className="mx-auto mt-24 max-w-[1200px] px-5 pb-24 md:mt-32 md:px-8">

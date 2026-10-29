@@ -410,8 +410,7 @@ function NotificationsTab() {
 
 const plans = [
   { k: "free", name: "Free", price: "$0", note: "Included by UCLA Anderson", features: ["Personalized roadmap", "Community & messages", "Marketplace perks", "Email reminders"] },
-  { k: "plus", name: "Plus", price: "$12", note: "per month", features: ["Everything in Free", "2 advisor calls / month", "Document checklist reviews", "Priority support"], popular: true },
-  { k: "concierge", name: "Concierge", price: "$149", note: "one-time", features: ["Everything in Plus", "Dedicated arrival advisor", "Housing shortlist done for you", "Airport pickup coordination"] },
+  { k: "concierge", name: "Concierge", price: "$149", note: "per month", features: ["1:1 support on top of the roadmap", "Everything else stays included"], popular: true },
 ];
 
 function BillingTab() {
@@ -427,7 +426,7 @@ function BillingTab() {
     <div className="space-y-5">
       <FormSheet config={form} onClose={() => setForm(null)} />
       <Section title="Your plan" description="Your school covers the Free plan. Upgrade anytime — cancel anytime.">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           {plans.map((p) => {
             const on = current === p.k;
             return (
@@ -520,8 +519,8 @@ function BillingTab() {
             </TableHeader>
             <TableBody>
               {[
-                ["AA-1042", "May 2, 2027", "Visa document review (one-off)", "$29.00"],
-                ["AA-0981", "Apr 12, 2027", "Advisor call · Finance", "$19.00"],
+                ["AA-1042", "May 2, 2027", "Concierge · May", "$149.00"],
+                ["AA-0981", "Apr 12, 2027", "Concierge · April", "$149.00"],
               ].map(([id, d, desc, amt]) => (
                 <TableRow key={id}>
                   <TableCell className="font-mono text-[12px]">{id}</TableCell>

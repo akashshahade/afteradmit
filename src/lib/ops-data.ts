@@ -139,7 +139,7 @@ export const partner = {
   title: "Partnerships Manager",
   category: "Housing",
   plan: "Pay-per-lead",
-  cpl: 18,
+  cpl: 8,
 };
 
 export type Listing = {
@@ -188,7 +188,7 @@ export const partnerByMilestone = [
 ];
 
 export const partnerInvoices = [
-  { id: "INV-0042", period: "June 2027", leads: 241, amount: 4338, status: "Due" as const, due: "Jul 15, 2027" },
-  { id: "INV-0037", period: "May 2027", leads: 188, amount: 3384, status: "Paid" as const, due: "Jun 15, 2027" },
-  { id: "INV-0031", period: "April 2027", leads: 96, amount: 1728, status: "Paid" as const, due: "May 15, 2027" },
+  { id: "INV-0042", period: "June 2027", leads: 241, amount: 1928, status: "Due" as const, due: "Jul 15, 2027" },
+  { id: "INV-0037", period: "May 2027", leads: 188, amount: 1504, status: "Paid" as const, due: "Jun 15, 2027" },
+  { id: "INV-0031", period: "April 2027", leads: 96, amount: 768, status: "Paid" as const, due: "May 15, 2027" },
 ];
