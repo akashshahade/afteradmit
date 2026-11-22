@@ -15,7 +15,28 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { FormSheet, type FormSheetConfig, type FormField } from "@/components/shell/form-sheet";
-import { milestones, providers, type Provider } from "@/lib/data";
+import { milestones, providers as seedProviders, type Provider } from "@/lib/data";
+import { loadProvidersAdmin } from "@/lib/admin-live";
+
+function mapProviderRow(row: Record<string, unknown>): Provider {
+  const name = String(row.name ?? "");
+  return {
+    id: String(row.id),
+    name,
+    category: String(row.category ?? "Loan") as Provider["category"],
+    tagline: String(row.tagline ?? ""),
+    description: String(row.description ?? ""),
+    perk: row.perk ? String(row.perk) : undefined,
+    code: row.code ? String(row.code) : undefined,
+    initials: String(row.initials || name.slice(0, 2).toUpperCase()),
+    color: String(row.color || "#18181B"),
+    rating: Number(row.rating) || 0,
+    reviews: Number(row.reviews) || 0,
+    url: String(row.url || "#"),
+    leads: Number(row.leads) || 0,
+    active: !!row.active,
+  };
+}
 
 function providerFields(p?: Provider): FormField[] {
   return [
@@ -34,6 +55,14 @@ export default function ProvidersPage() {
   const [q, setQ] = React.useState("");
   const [tab, setTab] = React.useState("all");
   const [review, setReview] = React.useState(true);
+  const [providers, setProviders] = React.useState<Provider[]>(seedProviders);
+
+  React.useEffect(() => {
+    void loadProvidersAdmin().then((rows) => {
+      if (rows.length) setProviders(rows.map((row) => mapProviderRow(row as Record<string, unknown>)));
+    });
+  }, []);
+
   const list = providers.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()) && (tab === "all" || p.category === tab));
 
   return (

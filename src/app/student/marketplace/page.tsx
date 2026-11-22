@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PageContainer } from "@/components/shell/app-shell";
-import { milestones, providers, type Provider } from "@/lib/data";
-import { createClient } from "@/lib/supabase/client";
+import { milestones, type Provider } from "@/lib/data";
+import { loadProviders, logMarketplaceClick } from "@/lib/marketplace-live";
 
 const categories = ["All", "Loan", "Housing", "Banking", "Insurance", "Remittance", "Phone", "Travel", "Visa", "Moving"] as const;
 
@@ -19,6 +19,14 @@ export default function MarketplacePage() {
   const [cat, setCat] = React.useState<(typeof categories)[number]>("All");
   const [q, setQ] = React.useState("");
   const [leaving, setLeaving] = React.useState<Provider | null>(null);
+  const [providers, setProviders] = React.useState<Provider[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    void loadProviders()
+      .then(setProviders)
+      .finally(() => setLoading(false));
+  }, []);
 
   const list = providers.filter((p) => (cat === "All" || p.category === cat) && (p.name.toLowerCase().includes(q.toLowerCase()) || p.tagline.toLowerCase().includes(q.toLowerCase())));
   const placementsFor = (id: string) => milestones.filter((m) => m.providers?.includes(id));
@@ -56,6 +64,8 @@ export default function MarketplacePage() {
         <ShieldCheck className="size-4 shrink-0 text-success" />
         AfterAdmit never shares your contact details with providers. You choose what to share on their site.
       </div>
+
+      {loading && <p className="mt-8 text-center text-[13px] text-muted-foreground">Loading providers…</p>}
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {list.map((p) => {
@@ -138,16 +148,7 @@ export default function MarketplacePage() {
                 onClick={() => {
                   void (async () => {
                     try {
-                      const supabase = createClient();
-                      const {
-                        data: { user },
-                      } = await supabase.auth.getUser();
-                      if (user) {
-                        await supabase.from("marketplace_clicks").insert({
-                          user_id: user.id,
-                          provider_id: leaving.id,
-                        });
-                      }
+                      await logMarketplaceClick(leaving.id, { source: "marketplace" });
                     } catch {
                       // still open provider even if click logging fails
                     }

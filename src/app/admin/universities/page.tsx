@@ -18,8 +18,34 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { FormSheet, type FormSheetConfig } from "@/components/shell/form-sheet";
-import { universities } from "@/lib/ops-data";
+import { type University } from "@/lib/ops-data";
 import { providers } from "@/lib/data";
+import { loadAdminSchools, type AdminSchool } from "@/lib/admin-live";
+
+function schoolColor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  const hex = (h & 0xffffff).toString(16).padStart(6, "0").slice(0, 6);
+  return `#${hex}`;
+}
+
+function mapAdminSchool(s: AdminSchool): University & { inviteTotal: number } {
+  const short = s.short_name ?? s.name;
+  return {
+    id: s.name,
+    name: s.full_name ?? s.name,
+    short,
+    domain: s.support_email?.split("@")[1] ?? s.support_email ?? "—",
+    terms: s.batches ? [`${s.batches} batch${s.batches === 1 ? "" : "es"}`] : [],
+    students: s.students,
+    signedUp: s.joined,
+    avgProgress: s.invited ? Math.round((s.joined / s.invited) * 100) : 0,
+    status: s.students > 0 ? "Live" : "Onboarding",
+    color: schoolColor(s.name),
+    admins: 0,
+    inviteTotal: s.invited,
+  };
+}
 
 const steps = [
   { k: "school", l: "University", i: Building2 },
@@ -197,6 +223,12 @@ function UniversitiesInner() {
   const [form, setForm] = React.useState<FormSheetConfig | null>(null);
   const [archived, setArchived] = React.useState<string[]>([]);
   const [q, setQ] = React.useState("");
+  const [universities, setUniversities] = React.useState<(University & { inviteTotal: number })[]>([]);
+
+  React.useEffect(() => {
+    void loadAdminSchools().then((rows) => setUniversities(rows.map(mapAdminSchool)));
+  }, []);
+
   const list = universities.filter((u) => !archived.includes(u.id) && u.name.toLowerCase().includes(q.toLowerCase()));
 
   return (
@@ -235,7 +267,7 @@ function UniversitiesInner() {
           </TableHeader>
           <TableBody>
             {list.map((u) => {
-              const act = u.students ? Math.round((u.signedUp / u.students) * 100) : 0;
+              const act = u.inviteTotal ? Math.round((u.signedUp / u.inviteTotal) * 100) : u.students ? Math.round((u.signedUp / u.students) * 100) : 0;
               return (
                 <TableRow key={u.id}>
                   <TableCell>

@@ -7,7 +7,7 @@ import { LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PostCard, UserAvatar } from "@/components/community/post-card";
 import { CreatePostBar, RightRail, SortBar, SpaceFilter, sortPosts, type Sort } from "@/components/community/feed";
-import { members as seedMembers, posts as seedPosts, type Member, type Post } from "@/lib/community-data";
+import type { Member, Post } from "@/lib/community-data";
 import { loadCommunityFeed } from "@/lib/community-live";
 import { useStudent } from "@/components/student/store";
 import { createClient } from "@/lib/supabase/client";
@@ -16,8 +16,8 @@ export default function CommunityHome() {
   const { profile } = useStudent();
   const [sort, setSort] = React.useState<Sort>("best");
   const [space, setSpace] = React.useState("all");
-  const [posts, setPosts] = React.useState<Post[]>(seedPosts);
-  const [members, setMembers] = React.useState<Record<string, Member>>(seedMembers);
+  const [posts, setPosts] = React.useState<Post[]>([]);
+  const [members, setMembers] = React.useState<Record<string, Member>>({});
   const [loading, setLoading] = React.useState(true);
   const [spaceCount, setSpaceCount] = React.useState(0);
 

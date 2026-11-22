@@ -18,11 +18,14 @@ export type Profile = {
   housing?: string | null;
   offer_accepted?: boolean | null;
   avatar_color?: string | null;
+  avatar_url?: string | null;
   handle?: string | null;
   bio?: string | null;
   linkedin?: string | null;
   industry?: string | null;
   batch_id?: string | null;
+  partner_org_id?: string | null;
+  notification_prefs?: Record<string, unknown> | null;
 };
 
 export function displayName(profile: Pick<Profile, "first_name" | "last_name" | "email">) {

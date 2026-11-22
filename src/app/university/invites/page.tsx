@@ -437,7 +437,7 @@ export default function UniversityInvitesPage() {
                     />
                   </div>
                 </div>
-                <Button type="submit" variant="ink" disabled={addingOne || step === "sending"}>
+                <Button type="submit" variant="ink" disabled={addingOne}>
                   {addingOne ? "Creating invite…" : "Create invite"}
                   {!addingOne && <UserPlus className="size-4" />}
                 </Button>

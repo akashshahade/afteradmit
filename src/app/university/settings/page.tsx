@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { createClient } from "@/lib/supabase/client";
 import type { SchoolSettings } from "@/lib/university-batches";
+import { getSchoolContract } from "@/lib/billing";
 
 export default function UniversitySettingsPage() {
   const [settings, setSettings] = React.useState<SchoolSettings | null>(null);
@@ -19,6 +20,12 @@ export default function UniversitySettingsPage() {
   const [shortName, setShortName] = React.useState("");
   const [timezone, setTimezone] = React.useState("America/Los_Angeles");
   const [supportEmail, setSupportEmail] = React.useState("");
+  const [contract, setContract] = React.useState<{
+    plan_id: string | null;
+    seats: number;
+    status: string;
+    billing_plans?: { name?: string; features?: string[] } | null;
+  } | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
 
@@ -35,6 +42,12 @@ export default function UniversitySettingsPage() {
           setShortName(row.short_name ?? "");
           setTimezone(row.timezone ?? "America/Los_Angeles");
           setSupportEmail(row.support_email ?? "");
+          try {
+            const c = await getSchoolContract(row.name);
+            setContract(c as typeof contract);
+          } catch {
+            setContract(null);
+          }
         }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Could not load settings");
@@ -148,6 +161,35 @@ export default function UniversitySettingsPage() {
           <Button asChild variant="outline" size="sm">
             <Link href="/university/batches">Open batches</Link>
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>School contract</CardTitle>
+          <CardDescription>
+            Billing pipeline only — no payment provider connected yet. Seat and plan records live in Supabase.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-[13.5px]">
+          {loading && <p className="text-muted-foreground">Loading…</p>}
+          {!loading && !contract && <p className="text-muted-foreground">No contract on file.</p>}
+          {contract && (
+            <>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Plan</span>
+                <span className="font-medium">{contract.billing_plans?.name || contract.plan_id || "—"}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Seats</span>
+                <span className="font-medium tabular">{contract.seats}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Status</span>
+                <span className="font-medium capitalize">{contract.status}</span>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </PageContainer>

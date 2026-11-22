@@ -28,6 +28,32 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { listings as seed, type Listing } from "@/lib/ops-data";
+import { createClient } from "@/lib/supabase/client";
+
+function formatUpdated(iso: string) {
+  const d = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (d <= 0) return "Today";
+  if (d === 1) return "Yesterday";
+  return `${d}d ago`;
+}
+
+function providerToListing(row: Record<string, unknown>): Listing {
+  const name = String(row.name ?? "Listing");
+  const active = !!row.active;
+  return {
+    id: String(row.id),
+    title: name,
+    type: String(row.category ?? "Service"),
+    price: row.perk ? String(row.perk) : "—",
+    status: active ? "Live" : "Paused",
+    placements: [],
+    schools: ["All schools"],
+    clicks: Number(row.leads) || 0,
+    ctr: 0,
+    perk: row.perk ? String(row.perk) : undefined,
+    updated: row.updated_at ? formatUpdated(String(row.updated_at)) : "—",
+  };
+}
 
 const placementOptions = ["Housing type decided", "Roommates confirmed", "Lease signed", "Arrival plan made", "Moved in"];
 
@@ -188,6 +214,25 @@ function ListingsInner() {
   const [sheet, setSheet] = React.useState(params.get("new") === "1");
   const [editing, setEditing] = React.useState<Listing | null>(null);
   const [deleting, setDeleting] = React.useState<Listing | null>(null);
+
+  React.useEffect(() => {
+    void (async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { data: profile } = user
+        ? await supabase.from("profiles").select("partner_org_id").eq("id", user.id).maybeSingle()
+        : { data: null };
+
+      let query = supabase.from("marketplace_providers").select("*").order("name");
+      if (profile?.partner_org_id) query = query.eq("id", profile.partner_org_id);
+      else query = query.eq("active", true);
+
+      const { data, error } = await query;
+      if (!error && data?.length) setItems(data.map((row) => providerToListing(row as Record<string, unknown>)));
+    })();
+  }, []);
 
   const list = items.filter((l) => tab === "all" || l.status === tab);
 

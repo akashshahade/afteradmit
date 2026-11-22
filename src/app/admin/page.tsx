@@ -16,10 +16,51 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { ChartTooltip, KpiCard } from "@/components/charts/chart-bits";
 import { ActivityRings } from "@/components/charts/activity-rings";
-import { feedback, kpis, leadsByCategory, leadsTrend, stageCompletion, universities } from "@/lib/ops-data";
+import { feedback, kpis, leadsByCategory, leadsTrend, stageCompletion, universities as fallbackUniversities, type University } from "@/lib/ops-data";
+import { loadAdminSchools, loadAdminStats, type AdminSchool, type AdminStats } from "@/lib/admin-live";
+
+function schoolColor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  const hex = (h & 0xffffff).toString(16).padStart(6, "0").slice(0, 6);
+  return `#${hex}`;
+}
+
+function adminSchoolToUniversity(s: AdminSchool): University {
+  const short = s.short_name ?? s.name;
+  const invited = s.invited || s.students;
+  const progress = invited ? Math.round((s.joined / invited) * 100) : 0;
+  return {
+    id: s.name,
+    name: s.full_name ?? s.name,
+    short,
+    domain: s.support_email?.split("@")[1] ?? "—",
+    terms: s.batches ? [`${s.batches} batch${s.batches === 1 ? "" : "es"}`] : [],
+    students: s.students,
+    signedUp: s.joined,
+    avgProgress: progress,
+    status: s.students > 0 ? "Live" : "Onboarding",
+    color: schoolColor(s.name),
+    admins: 0,
+  };
+}
 
 export default function AdminOverview() {
-  const totalLeads = leadsByCategory.reduce((n, c) => n + c.leads, 0);
+  const [stats, setStats] = React.useState<AdminStats | null>(null);
+  const [schoolRows, setSchoolRows] = React.useState<AdminSchool[]>([]);
+
+  React.useEffect(() => {
+    void loadAdminStats().then(setStats);
+    void loadAdminSchools().then(setSchoolRows);
+  }, []);
+
+  const invitedStudents = stats?.invites ?? kpis.students;
+  const activationPct = stats?.invites ? Math.round((stats.joined / stats.invites) * 100) : kpis.activation;
+  const providerLeads = stats?.clicks ?? kpis.leads;
+  const milestonesDone = stats?.posts ?? kpis.milestonesDone;
+
+  const universities = schoolRows.length ? schoolRows.map(adminSchoolToUniversity) : fallbackUniversities;
+  const totalLeads = stats?.clicks ?? leadsByCategory.reduce((n, c) => n + c.leads, 0);
   const live = universities.filter((u) => u.status === "Live");
 
   return (
@@ -66,10 +107,10 @@ export default function AdminOverview() {
       />
 
       <div data-tour="kpis" className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Invited students" value={formatNumber(kpis.students)} delta={kpis.studentsDelta} hint="vs last period" icon={GraduationCap} spark={[12, 18, 22, 30, 41, 48, 55, 63]} />
-        <KpiCard label="Activation rate" value={`${kpis.activation}%`} delta={kpis.activationDelta} hint="signed up" icon={UserCheck} spark={[52, 55, 58, 61, 64, 66, 69, 71]} />
-        <KpiCard label="Provider leads" value={formatNumber(kpis.leads)} delta={kpis.leadsDelta} hint="clicks" icon={MousePointerClick} spark={[31, 44, 58, 72, 69, 88, 104, 121, 139, 168]} />
-        <KpiCard label="Milestones completed" value={formatNumber(kpis.milestonesDone)} delta={kpis.milestonesDelta} hint="all schools" icon={CheckCheck} spark={[3, 5, 6, 9, 12, 14, 18, 22]} />
+        <KpiCard label="Invited students" value={formatNumber(invitedStudents)} delta={stats ? undefined : kpis.studentsDelta} hint={stats ? "live" : "vs last period"} icon={GraduationCap} spark={[12, 18, 22, 30, 41, 48, 55, 63]} />
+        <KpiCard label="Activation rate" value={`${activationPct}%`} delta={stats ? undefined : kpis.activationDelta} hint="signed up" icon={UserCheck} spark={[52, 55, 58, 61, 64, 66, 69, 71]} />
+        <KpiCard label="Provider leads" value={formatNumber(providerLeads)} delta={stats ? undefined : kpis.leadsDelta} hint="clicks" icon={MousePointerClick} spark={[31, 44, 58, 72, 69, 88, 104, 121, 139, 168]} />
+        <KpiCard label="Milestones completed" value={formatNumber(milestonesDone)} delta={stats ? undefined : kpis.milestonesDelta} hint="all schools" icon={CheckCheck} spark={[3, 5, 6, 9, 12, 14, 18, 22]} />
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -183,14 +224,17 @@ export default function AdminOverview() {
             </CardAction>
           </CardHeader>
           <CardContent className="space-y-1 px-3 pb-3 pt-3">
-            {live.map((u) => (
+            {live.map((u) => {
+              const denom = Math.max(u.students, 1);
+              const actPct = Math.round((u.signedUp / denom) * 100);
+              return (
               <Link key={u.id} href="/admin/universities" className="flex items-center gap-4 rounded-xl px-3 py-3 transition-colors hover:bg-[#fafafa]">
                 <ActivityRings
                   size={48}
                   stroke={5}
                   gap={2}
                   rings={[
-                    { value: u.signedUp / u.students, color: "#FF4500", label: "Activated", display: `${Math.round((u.signedUp / u.students) * 100)}%` },
+                    { value: u.signedUp / denom, color: "#FF4500", label: "Activated", display: `${actPct}%` },
                     { value: u.avgProgress / 100, color: "#18181B", label: "Progress", display: `${u.avgProgress}%` },
                   ]}
                 />
@@ -203,7 +247,7 @@ export default function AdminOverview() {
                   </div>
                 </div>
                 <div className="text-right text-[12px]">
-                  <div className="tabular font-semibold">{Math.round((u.signedUp / u.students) * 100)}%</div>
+                  <div className="tabular font-semibold">{actPct}%</div>
                   <div className="text-muted-foreground">activated</div>
                 </div>
                 <div className="w-16 text-right text-[12px]">
@@ -211,7 +255,8 @@ export default function AdminOverview() {
                   <div className="text-muted-foreground">progress</div>
                 </div>
               </Link>
-            ))}
+            );
+            })}
           </CardContent>
         </Card>
       </div>

@@ -77,6 +77,8 @@ function LoginForm() {
         destination = nextPath.startsWith("/university") ? nextPath : "/university";
       } else if (profile?.role === "admin") {
         destination = nextPath.startsWith("/admin") ? nextPath : "/admin";
+      } else if (profile?.role === "partner") {
+        destination = nextPath.startsWith("/partner") ? nextPath : "/partner";
       } else if (!profile?.onboarding_completed_at) {
         destination = "/onboarding";
       } else if (!nextPath.startsWith("/student") && !nextPath.startsWith("/onboarding")) {

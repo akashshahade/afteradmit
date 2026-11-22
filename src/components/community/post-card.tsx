@@ -279,7 +279,7 @@ export function PostCard({
       </div>
 
       <div className="relative z-10 mt-4 flex items-center gap-2 border-t pt-3.5">
-        <VotePill initial={post.votes} />
+        <VotePill initial={post.votes} postId={post.id} />
         <Link
           href={`/student/community/${post.id}`}
           className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

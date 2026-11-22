@@ -9,21 +9,59 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
-import { listings } from "@/lib/ops-data";
+import { createClient } from "@/lib/supabase/client";
+import { loadProviders } from "@/lib/marketplace-live";
 
-const events = [
-  { id: "L-20930", listing: "Furnished 3-bed suite · Gayley Ave", milestone: "Lease signed", school: "UCLA Anderson", source: "Milestone", at: "Jul 8, 09:02" },
-  { id: "L-20924", listing: "Arrival short-stay beds (2–14 nights)", milestone: "Arrival plan made", school: "UCLA Anderson", source: "Milestone", at: "Jul 7, 19:55" },
-  { id: "L-20917", listing: "Furnished 3-bed suite · Gayley Ave", milestone: "Roommates confirmed", school: "UCLA Anderson", source: "Community post", at: "Jul 7, 14:12" },
-  { id: "L-20911", listing: "Arrival short-stay beds (2–14 nights)", milestone: "—", school: "Bayview", source: "Marketplace", at: "Jul 7, 10:40" },
-  { id: "L-20904", listing: "Furnished 3-bed suite · Gayley Ave", milestone: "Lease signed", school: "UCLA Anderson", source: "Milestone", at: "Jul 6, 22:18" },
-  { id: "L-20898", listing: "Furnished 3-bed suite · Gayley Ave", milestone: "—", school: "UCLA Anderson", source: "Marketplace", at: "Jul 6, 17:03" },
-  { id: "L-20889", listing: "Arrival short-stay beds (2–14 nights)", milestone: "Arrival plan made", school: "Bayview", source: "Milestone", at: "Jul 6, 09:51" },
-];
+type PartnerLeadRow = {
+  id: string;
+  listing: string;
+  milestone: string;
+  school: string;
+  source: string;
+  at: string;
+};
+
+function formatAt(iso: string) {
+  return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function mapPartnerLead(row: Record<string, unknown>, listingNames: Record<string, string>): PartnerLeadRow {
+  const providerId = row.provider_id ? String(row.provider_id) : "";
+  const listing =
+    String(row.listing_title ?? row.listing ?? row.provider_name ?? (providerId && listingNames[providerId]) ?? providerId ?? "Listing");
+  const source = String(row.source ?? "marketplace");
+  const milestone = String(row.milestone_title ?? row.milestone ?? row.milestone_id ?? "—");
+  const school = String(row.school_name ?? row.school ?? "—");
+  const atRaw = String(row.created_at ?? row.clicked_at ?? "");
+  return {
+    id: String(row.id ?? row.lead_id),
+    listing,
+    milestone,
+    school,
+    source: source.charAt(0).toUpperCase() + source.slice(1),
+    at: atRaw ? formatAt(atRaw) : "—",
+  };
+}
 
 export default function PartnerLeads() {
   const [listing, setListing] = React.useState("all");
-  const rows = events.filter((e) => listing === "all" || e.listing === listing);
+  const [rows, setRows] = React.useState<PartnerLeadRow[]>([]);
+
+  React.useEffect(() => {
+    void (async () => {
+      const supabase = createClient();
+      const providers = await loadProviders();
+      const listingNames = Object.fromEntries(providers.map((p) => [p.id, p.name]));
+      const { data, error } = await supabase.rpc("list_partner_leads");
+      if (!error && data?.length) {
+        setRows((data as Record<string, unknown>[]).map((row) => mapPartnerLead(row, listingNames)));
+      }
+    })();
+  }, []);
+
+  const listings = React.useMemo(() => Array.from(new Set(rows.map((r) => r.listing))), [rows]);
+  const visible = rows.filter((e) => listing === "all" || e.listing === listing);
+
   return (
     <PageContainer>
       <PageHeader
@@ -31,7 +69,7 @@ export default function PartnerLeads() {
         title="Leads"
         description="Every click from a student to your site. Billed per lead."
         actions={
-          <Button variant="ink" size="sm" onClick={() => toast.success("Export ready", { description: "westwood_leads_june.csv" })}>
+          <Button variant="ink" size="sm" onClick={() => toast.success("Export ready", { description: "leads_export.csv" })}>
             <Download className="size-4" /> Export CSV
           </Button>
         }
@@ -51,13 +89,15 @@ export default function PartnerLeads() {
             <SelectContent>
               <SelectItem value="all">All listings</SelectItem>
               {listings.map((l) => (
-                <SelectItem key={l.id} value={l.title}>
-                  {l.title}
+                <SelectItem key={l} value={l}>
+                  {l}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <span className="ml-auto text-[12px] text-muted-foreground">{rows.length} events · last 3 days</span>
+          <span className="ml-auto text-[12px] text-muted-foreground">
+            {visible.length} events{rows.length ? "" : " · connect as partner to load live data"}
+          </span>
         </div>
         <Table>
           <TableHeader>
@@ -71,7 +111,7 @@ export default function PartnerLeads() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((e) => (
+            {visible.map((e) => (
               <TableRow key={e.id}>
                 <TableCell className="font-mono text-[12px]">{e.id}</TableCell>
                 <TableCell className="max-w-[260px] truncate font-medium">{e.listing}</TableCell>
@@ -83,6 +123,13 @@ export default function PartnerLeads() {
                 <TableCell className="tabular text-muted-foreground">{e.at}</TableCell>
               </TableRow>
             ))}
+            {visible.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="py-10 text-center text-[13px] text-muted-foreground">
+                  No lead events yet.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>

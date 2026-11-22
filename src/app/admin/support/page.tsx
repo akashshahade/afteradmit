@@ -12,6 +12,49 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { replyToTicket, updateTicket, useTickets, type Ticket, type TicketPriority, type TicketStatus } from "@/components/support/support-store";
 import { statusStyles } from "@/components/support/my-requests";
+import { loadSupportTickets } from "@/lib/admin-live";
+
+function titleCase(s: string) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
+}
+
+function ticketFromRow(row: Record<string, unknown>): Ticket {
+  const statusRaw = String(row.status ?? "open").toLowerCase();
+  const status: TicketStatus = statusRaw === "resolved" ? "Resolved" : statusRaw === "pending" ? "Pending" : "Open";
+  const priorityRaw = titleCase(String(row.priority ?? "normal"));
+  const priority = (["Low", "Normal", "High", "Urgent"].includes(priorityRaw) ? priorityRaw : "Normal") as TicketPriority;
+  const name = String(row.requester_name ?? row.contact_name ?? row.name ?? "Requester");
+  const email = String(row.requester_email ?? row.email ?? "");
+  const kindRaw = String(row.requester_kind ?? row.requester_type ?? "student").toLowerCase();
+  const kind = kindRaw.includes("partner") ? "Partner" : kindRaw.includes("university") ? "University" : "Student";
+  const body = String(row.body ?? row.description ?? row.message ?? "");
+  const created = row.created_at ? new Date(String(row.created_at)).toLocaleString("en-US", { month: "short", day: "numeric" }) : "Recently";
+  const initials = name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return {
+    id: String(row.id ?? row.ticket_id),
+    subject: String(row.subject ?? "Support request"),
+    category: String(row.category ?? "Something else"),
+    status,
+    priority,
+    requester: {
+      name,
+      email,
+      initials: initials || "??",
+      color: "#18181B",
+      org: String(row.org ?? row.school_name ?? row.organization ?? "—"),
+      kind,
+    },
+    assignee: String(row.assignee ?? row.assigned_to ?? "Unassigned"),
+    updated: created,
+    messages: body ? [{ from: "requester", name, body, time: created }] : [],
+  };
+}
 
 const filters = ["Open", "Pending", "Resolved", "All"] as const;
 const priorityDot: Record<TicketPriority, string> = { Low: "bg-[#D4D4D8]", Normal: "bg-[#0EA5E9]", High: "bg-warning", Urgent: "bg-destructive" };
@@ -123,7 +166,16 @@ function Detail({ t, onBack }: { t: Ticket; onBack: () => void }) {
 }
 
 export default function SupportInboxPage() {
-  const tickets = useTickets();
+  const mockTickets = useTickets();
+  const [liveTickets, setLiveTickets] = React.useState<Ticket[] | null>(null);
+  const tickets = liveTickets ?? mockTickets;
+
+  React.useEffect(() => {
+    void loadSupportTickets().then((rows) => {
+      if (rows.length) setLiveTickets(rows.map((row) => ticketFromRow(row as Record<string, unknown>)));
+    });
+  }, []);
+
   const [filter, setFilter] = React.useState<(typeof filters)[number]>("Open");
   const [q, setQ] = React.useState("");
   const [selectedId, setSelectedId] = React.useState<string | null>(null);

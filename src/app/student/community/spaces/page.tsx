@@ -10,7 +10,8 @@ import { cn, compactNumber } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SpaceIcon } from "@/components/community/space-icon";
-import { communities, type Community } from "@/lib/community-data";
+import type { Community } from "@/lib/community-data";
+import { loadSpaces } from "@/lib/community-live";
 import { createClient } from "@/lib/supabase/client";
 
 function SpaceCard({ c, joined, onToggle }: { c: Community; joined: boolean; onToggle: () => void }) {
@@ -76,34 +77,22 @@ function SpaceCard({ c, joined, onToggle }: { c: Community; joined: boolean; onT
 }
 
 export default function SpacesDirectory() {
-  const [joined, setJoined] = React.useState<Record<string, boolean>>(() =>
-    Object.fromEntries(communities.map((c) => [c.id, c.joined])),
-  );
+  const [spaces, setSpaces] = React.useState<Community[]>([]);
+  const [joined, setJoined] = React.useState<Record<string, boolean>>({});
   const [q, setQ] = React.useState("");
 
   React.useEffect(() => {
     void (async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from("community_members").select("space_id").eq("user_id", user.id);
-      if (data?.length) {
-        setJoined((j) => {
-          const next = { ...j };
-          for (const id of Object.keys(next)) next[id] = false;
-          for (const row of data) next[row.space_id] = true;
-          return next;
-        });
-      }
+      const list = await loadSpaces();
+      setSpaces(list);
+      setJoined(Object.fromEntries(list.map((c) => [c.id, c.joined])));
     })();
   }, []);
 
   const query = q.trim().toLowerCase();
   const match = (c: Community) => !query || `${c.name} ${c.title} ${c.description}`.toLowerCase().includes(query);
-  const mine = communities.filter((c) => joined[c.id] && match(c));
-  const discover = communities.filter((c) => !joined[c.id] && match(c));
+  const mine = spaces.filter((c) => joined[c.id] && match(c));
+  const discover = spaces.filter((c) => !joined[c.id] && match(c));
 
   const toggle = (c: Community) => {
     const next = !joined[c.id];

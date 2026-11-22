@@ -2,7 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import { Rocket, Wallet, Globe, GraduationCap, HeartPulse, House, Landmark, Plane, MapPin } from "lucide-react";
 
 // Fixed "today" so overdue and countdown states are stable in the demo.
-export const TODAY = "2027-05-18";
+/** Calendar "today" for overdue / countdown math. */
+export const TODAY = new Date().toISOString().slice(0, 10);
 
 export const RING_COLORS = { roadmap: "#FF4500", month: "#8B5CF6", onTime: "#14B8A6" };
 

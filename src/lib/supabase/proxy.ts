@@ -34,14 +34,19 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isStudentRoute = path === "/student" || path.startsWith("/student/");
+  const isOnboarding = path === "/onboarding" || path.startsWith("/onboarding/");
   const isUniversityLogin = path === "/university/login";
   const isUniversityRoute =
     !isUniversityLogin && (path === "/university" || path.startsWith("/university/"));
+  const isAdminRoute = path === "/admin" || path.startsWith("/admin/");
+  const isPartnerRoute = path === "/partner" || path.startsWith("/partner/");
 
   const redirectWithCookies = (pathname: string) => {
     const url = request.nextUrl.clone();
     url.pathname = pathname;
-    url.searchParams.set("next", path);
+    if (pathname === "/login" || pathname === "/university/login") {
+      url.searchParams.set("next", path);
+    }
     const redirect = NextResponse.redirect(url);
     for (const cookie of supabaseResponse.cookies.getAll()) {
       redirect.cookies.set(cookie);
@@ -53,7 +58,7 @@ export async function updateSession(request: NextRequest) {
     return redirect;
   };
 
-  if (isStudentRoute && !user) {
+  if ((isStudentRoute || isOnboarding || isAdminRoute || isPartnerRoute) && !user) {
     return redirectWithCookies("/login");
   }
 

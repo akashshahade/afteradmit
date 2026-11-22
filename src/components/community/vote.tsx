@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn, compactNumber } from "@/lib/utils";
+import { voteOnPost } from "@/lib/community-live";
 
 export function useVote(initial: number) {
   const [vote, setVote] = React.useState<1 | -1 | 0>(0);
@@ -21,8 +23,43 @@ function stop(e: React.MouseEvent, fn: () => void) {
   fn();
 }
 
-export function VotePill({ initial, className }: { initial: number; className?: string }) {
-  const { vote, score, up, down } = useVote(initial);
+export function VotePill({
+  initial,
+  postId,
+  className,
+}: {
+  initial: number;
+  postId?: string;
+  className?: string;
+}) {
+  const [vote, setVote] = React.useState<1 | -1 | 0>(0);
+  const [score, setScore] = React.useState(initial);
+  const [busy, setBusy] = React.useState(false);
+
+  React.useEffect(() => {
+    setScore(initial);
+    setVote(0);
+  }, [initial, postId]);
+
+  const apply = (next: 1 | -1) => {
+    const delta = vote === next ? -next : vote === 0 ? next : next * 2;
+    const newVote = vote === next ? 0 : next;
+    const prevVote = vote;
+    const prevScore = score;
+    setVote(newVote);
+    setScore((s) => s + delta);
+
+    if (!postId) return;
+    setBusy(true);
+    void voteOnPost(postId, next)
+      .catch((e) => {
+        setVote(prevVote);
+        setScore(prevScore);
+        toast.error(e instanceof Error ? e.message : "Could not vote");
+      })
+      .finally(() => setBusy(false));
+  };
+
   return (
     <div
       className={cn(
@@ -34,17 +71,27 @@ export function VotePill({ initial, className }: { initial: number; className?: 
       <button
         aria-label="Upvote"
         aria-pressed={vote === 1}
-        onClick={(e) => stop(e, up)}
-        className={cn("flex h-full items-center rounded-l-lg px-1.5 transition-colors", vote === 1 ? "text-primary" : "text-muted-foreground hover:bg-muted hover:text-primary")}
+        disabled={busy}
+        onClick={(e) => stop(e, () => apply(1))}
+        className={cn(
+          "flex h-full items-center rounded-l-lg px-1.5 transition-colors",
+          vote === 1 ? "text-primary" : "text-muted-foreground hover:bg-muted hover:text-primary",
+        )}
       >
         <ChevronUp className="size-4" strokeWidth={2.4} />
       </button>
-      <span className={cn("tabular min-w-7 text-center text-[12.5px] font-semibold", vote === 1 ? "text-primary" : "text-foreground")}>{compactNumber(score)}</span>
+      <span className={cn("tabular min-w-7 text-center text-[12.5px] font-semibold", vote === 1 ? "text-primary" : "text-foreground")}>
+        {compactNumber(score)}
+      </span>
       <button
         aria-label="Downvote"
         aria-pressed={vote === -1}
-        onClick={(e) => stop(e, down)}
-        className={cn("flex h-full items-center rounded-r-lg px-1.5 transition-colors", vote === -1 ? "text-ink" : "text-muted-foreground hover:bg-muted hover:text-ink")}
+        disabled={busy}
+        onClick={(e) => stop(e, () => apply(-1))}
+        className={cn(
+          "flex h-full items-center rounded-r-lg px-1.5 transition-colors",
+          vote === -1 ? "text-ink" : "text-muted-foreground hover:bg-muted hover:text-ink",
+        )}
       >
         <ChevronDown className="size-4" strokeWidth={2.4} />
       </button>

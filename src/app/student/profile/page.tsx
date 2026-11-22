@@ -53,6 +53,17 @@ import { school, student } from "@/lib/data";
 import { useStudent } from "@/components/student/store";
 import { createClient } from "@/lib/supabase/client";
 import { displayName, initials } from "@/lib/auth-profile";
+import { uploadAvatar } from "@/lib/storage";
+import {
+  formatMoney,
+  getMySubscription,
+  listMyInvoices,
+  listPlans,
+  requestCheckout,
+  type BillingInvoice,
+  type BillingPlan,
+  type BillingSubscription,
+} from "@/lib/billing";
 import {
   applyOnboardingRules,
   blankCatalog,
@@ -116,6 +127,7 @@ function ToggleRow({ title, desc, defaultChecked = true }: { title: string; desc
 function ProfileTab() {
   const { profile, refresh } = useStudent();
   const [photo, setPhoto] = React.useState<string | null>(null);
+  const [uploading, setUploading] = React.useState(false);
   const [firstName, setFirstName] = React.useState(profile?.first_name ?? "");
   const [lastName, setLastName] = React.useState(profile?.last_name ?? "");
   const [handle, setHandle] = React.useState(profile?.handle ?? "");
@@ -135,6 +147,7 @@ function ProfileTab() {
     setHometown(profile.home_city ?? "");
     setIndustry(profile.industry ?? "consulting");
     setLinkedin(profile.linkedin ?? "");
+    setPhoto(profile.avatar_url ?? null);
   }, [profile]);
 
   const save = async () => {
@@ -179,17 +192,27 @@ function ProfileTab() {
             </AvatarFallback>
           </Avatar>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-              <Camera className="size-4" /> {photo ? "Change photo" : "Upload photo"}
+            <Button variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+              <Camera className="size-4" /> {uploading ? "Uploading…" : photo ? "Change photo" : "Upload photo"}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               className="text-muted-foreground"
-              disabled={!photo}
+              disabled={!photo || uploading}
               onClick={() => {
-                setPhoto(null);
-                toast("Photo removed");
+                void (async () => {
+                  if (!profile) return;
+                  try {
+                    const supabase = createClient();
+                    await supabase.from("profiles").update({ avatar_url: null }).eq("id", profile.id);
+                    setPhoto(null);
+                    await refresh();
+                    toast.success("Photo removed");
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Could not remove photo");
+                  }
+                })();
               }}
             >
               Remove
@@ -197,15 +220,25 @@ function ProfileTab() {
             <input
               ref={fileRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg,image/webp,image/avif"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
-                if (f && f.type.startsWith("image/")) {
-                  setPhoto(URL.createObjectURL(f));
-                  toast.success("Photo ready — save profile to keep other changes");
-                }
                 e.target.value = "";
+                if (!f || !f.type.startsWith("image/")) return;
+                void (async () => {
+                  setUploading(true);
+                  try {
+                    const url = await uploadAvatar(f);
+                    setPhoto(url);
+                    await refresh();
+                    toast.success("Photo uploaded");
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Upload failed");
+                  } finally {
+                    setUploading(false);
+                  }
+                })();
               }}
             />
           </div>
@@ -557,38 +590,52 @@ function NotificationsTab() {
   );
 }
 
-const plans = [
-  { k: "free", name: "Free", price: "$0", note: "Included by UCLA Anderson", features: ["Personalized roadmap", "Community & messages", "Marketplace perks", "Email reminders"] },
-  { k: "concierge", name: "Concierge", price: "$149", note: "per month", features: ["1:1 support on top of the roadmap", "Everything else stays included"], popular: true },
-];
-
 function BillingTab() {
-  const [current, setCurrent] = React.useState("free");
-  const [form, setForm] = React.useState<FormSheetConfig | null>(null);
-  const cardFields = (last4?: string): FormSheetConfig["fields"] => [
-    { name: "name", label: "Name on card", defaultValue: last4 ? "Sayali Dhale" : "", required: true },
-    { name: "number", label: "Card number", placeholder: last4 ? `•••• •••• •••• ${last4}` : "1234 1234 1234 1234", required: !last4 },
-    { name: "exp", label: "Expiry (MM/YY)", defaultValue: last4 ? "08/29" : "", placeholder: "MM/YY", required: true },
-    { name: "default", label: "Set as default", type: "switch", defaultValue: true },
-  ];
+  const { profile } = useStudent();
+  const [plans, setPlans] = React.useState<BillingPlan[]>([]);
+  const [sub, setSub] = React.useState<BillingSubscription | null>(null);
+  const [invoices, setInvoices] = React.useState<BillingInvoice[]>([]);
+  const [busy, setBusy] = React.useState<string | null>(null);
+
+  const reload = React.useCallback(async () => {
+    const [p, s, inv] = await Promise.all([listPlans("student"), getMySubscription(), listMyInvoices()]);
+    setPlans(p);
+    setSub(s);
+    setInvoices(inv);
+  }, []);
+
+  React.useEffect(() => {
+    void reload().catch(() => undefined);
+  }, [reload]);
+
+  const currentPlanId = sub?.status === "pending_checkout" ? sub.plan_id : sub?.plan_id || "student_free";
+
   return (
     <div className="space-y-5">
-      <FormSheet config={form} onClose={() => setForm(null)} />
-      <Section title="Your plan" description="Your school covers the Free plan. Upgrade anytime — cancel anytime.">
+      <Section title="Your plan" description="Your school covers Free. Concierge checkout is queued until a payment provider is connected.">
+        {sub?.status === "pending_checkout" && (
+          <div className="mb-3 rounded-xl border border-primary/20 bg-primary-soft/50 px-4 py-3 text-[12.5px] text-muted-foreground">
+            Checkout pending for <span className="font-medium text-foreground">{sub.plan_id}</span> — no charge yet. We&apos;ll email you when payments go live.
+          </div>
+        )}
         <div className="grid gap-3 md:grid-cols-2">
           {plans.map((p) => {
-            const on = current === p.k;
+            const on = currentPlanId === p.id && sub?.status !== "pending_checkout";
+            const pending = sub?.status === "pending_checkout" && sub.plan_id === p.id;
+            const popular = p.id === "student_concierge";
             return (
-              <div key={p.k} className={cn("relative flex flex-col rounded-xl border p-4", on && "border-ink ring-1 ring-ink", p.popular && !on && "border-primary/40")}>
-                {p.popular && (
+              <div key={p.id} className={cn("relative flex flex-col rounded-xl border p-4", on && "border-ink ring-1 ring-ink", popular && !on && "border-primary/40")}>
+                {popular && (
                   <Badge variant="solid" className="absolute -top-2.5 right-3">
                     <Sparkles /> Popular
                   </Badge>
                 )}
                 <div className="text-[13px] font-semibold">{p.name}</div>
                 <div className="mt-2 flex items-baseline gap-1">
-                  <span className="tabular text-[26px] font-semibold tracking-tight">{p.price}</span>
-                  <span className="text-[12px] text-muted-foreground">{p.note}</span>
+                  <span className="tabular text-[26px] font-semibold tracking-tight">{formatMoney(p.amount_cents, p.currency)}</span>
+                  <span className="text-[12px] text-muted-foreground">
+                    {p.amount_cents === 0 ? "Included by your school" : `per ${p.interval}`}
+                  </span>
                 </div>
                 <ul className="mt-3 space-y-1.5">
                   {p.features.map((f) => (
@@ -600,14 +647,30 @@ function BillingTab() {
                 <Button
                   className="mt-4"
                   size="sm"
-                  variant={on ? "outline" : p.popular ? "default" : "ink"}
-                  disabled={on}
+                  variant={on ? "outline" : popular ? "default" : "ink"}
+                  disabled={on || pending || busy === p.id}
                   onClick={() => {
-                    setCurrent(p.k);
-                    toast.success(`Switched to ${p.name}`);
+                    if (p.amount_cents === 0) {
+                      toast.message("You are already on Free");
+                      return;
+                    }
+                    void (async () => {
+                      setBusy(p.id);
+                      try {
+                        await requestCheckout(p.id);
+                        await reload();
+                        toast.success("Checkout started", {
+                          description: "No payment provider yet — request saved as pending.",
+                        });
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : "Could not start checkout");
+                      } finally {
+                        setBusy(null);
+                      }
+                    })();
                   }}
                 >
-                  {on ? "Current plan" : `Choose ${p.name}`}
+                  {on ? "Current plan" : pending ? "Pending checkout" : busy === p.id ? "Starting…" : `Choose ${p.name}`}
                 </Button>
               </div>
             );
@@ -615,24 +678,9 @@ function BillingTab() {
         </div>
       </Section>
 
-      <Section
-        title="Payment method"
-        action={
-          <Button variant="outline" size="xs" onClick={() => setForm({ title: "Add payment method", submitLabel: "Add card", success: "Card added", fields: cardFields() })}>
-            Add method
-          </Button>
-        }
-      >
-        <div className="flex items-center gap-3 rounded-xl border p-3.5">
-          <span className="flex h-8 w-12 items-center justify-center rounded-md bg-ink text-[10px] font-bold tracking-wider text-white">VISA</span>
-          <div className="flex-1">
-            <div className="text-[13px] font-medium">Visa ending in 4242</div>
-            <div className="text-[12px] text-muted-foreground">Expires 08/2029</div>
-          </div>
-          <Badge variant="secondary">Default</Badge>
-          <Button variant="ghost" size="xs" onClick={() => setForm({ title: "Edit card", success: "Card updated", fields: cardFields("4242") })}>
-            Edit
-          </Button>
+      <Section title="Payment method" description="Card capture will connect when a payment provider is enabled. Pipeline is ready.">
+        <div className="rounded-xl border border-dashed p-4 text-[13px] text-muted-foreground">
+          No payment provider connected. Plan upgrades create a <span className="font-medium text-foreground">pending_checkout</span> subscription record only.
         </div>
       </Section>
 
@@ -640,20 +688,16 @@ function BillingTab() {
         <div className="grid max-w-xl gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Billing name</Label>
-            <Input defaultValue="Sayali Dhale" />
+            <Input defaultValue={profile ? displayName(profile) : ""} readOnly />
           </div>
           <div className="space-y-1.5">
             <Label>Billing email</Label>
-            <Input defaultValue={student.email} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Address</Label>
-            <Input defaultValue="12 Marine Drive, Mumbai 400020, India" />
+            <Input defaultValue={profile?.email ?? ""} readOnly />
           </div>
         </div>
       </Section>
 
-      <Section title="Invoices" description="Download receipts for past payments.">
+      <Section title="Invoices" description="Receipts appear here after payments go live.">
         <div className="-mx-4 -my-5 sm:-mx-6">
           <Table>
             <TableHeader>
@@ -667,30 +711,41 @@ function BillingTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {[
-                ["AA-1042", "May 2, 2027", "Concierge · May", "$149.00"],
-                ["AA-0981", "Apr 12, 2027", "Concierge · April", "$149.00"],
-              ].map(([id, d, desc, amt]) => (
-                <TableRow key={id}>
-                  <TableCell className="font-mono text-[12px]">{id}</TableCell>
-                  <TableCell>{d}</TableCell>
-                  <TableCell>{desc}</TableCell>
-                  <TableCell className="tabular font-medium">{amt}</TableCell>
+              {invoices.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                    No invoices yet
+                  </TableCell>
+                </TableRow>
+              )}
+              {invoices.map((inv) => (
+                <TableRow key={inv.id}>
+                  <TableCell className="font-mono text-[12px]">{inv.id.slice(0, 8)}</TableCell>
+                  <TableCell>{new Date(inv.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>{inv.description || "Subscription"}</TableCell>
+                  <TableCell className="tabular font-medium">{formatMoney(inv.amount_cents, inv.currency)}</TableCell>
                   <TableCell>
-                    <Badge variant="success">Paid</Badge>
+                    <Badge variant={inv.status === "paid" ? "success" : "secondary"}>{inv.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
                       size="icon-xs"
-                      aria-label={`Download receipt ${id}`}
+                      aria-label={`Download receipt ${inv.id}`}
                       onClick={() => {
                         downloadFile(
-                          `AfterAdmit-receipt-${id}.txt`,
-                          [`AfterAdmit, Inc. — Receipt ${id}`, `Date: ${d}`, `Billed to: Sayali Dhale (${student.email})`, `Item: ${desc}`, `Amount paid: ${amt}`, "Status: Paid"].join("\n"),
+                          `AfterAdmit-receipt-${inv.id.slice(0, 8)}.txt`,
+                          [
+                            `AfterAdmit, Inc. — Receipt ${inv.id}`,
+                            `Date: ${new Date(inv.created_at).toLocaleDateString()}`,
+                            `Billed to: ${profile ? displayName(profile) : ""} (${profile?.email ?? ""})`,
+                            `Item: ${inv.description || "Subscription"}`,
+                            `Amount: ${formatMoney(inv.amount_cents, inv.currency)}`,
+                            `Status: ${inv.status}`,
+                          ].join("\n"),
                           "text/plain;charset=utf-8",
                         );
-                        toast.success("Receipt downloaded", { description: id });
+                        toast.success("Receipt downloaded");
                       }}
                     >
                       <Receipt className="size-4" />

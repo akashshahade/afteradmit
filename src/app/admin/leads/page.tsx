@@ -13,11 +13,107 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { ChartTooltip } from "@/components/charts/chart-bits";
 import { leadEvents, leadsTrend } from "@/lib/ops-data";
-import { providers } from "@/lib/data";
+import { providers as seedProviders, type Provider } from "@/lib/data";
+import { loadProvidersAdmin, loadRecentClicks } from "@/lib/admin-live";
+
+type ClickRow = {
+  id: string;
+  provider_id: string;
+  school_name: string | null;
+  milestone_id: string | null;
+  source: string | null;
+  created_at: string;
+  user_id: string | null;
+};
+
+type LeadRow = {
+  id: string;
+  student: string;
+  university: string;
+  provider: string;
+  milestone: string;
+  clicked: string;
+};
+
+function pseudoStudent(userId: string | null) {
+  if (!userId) return "—";
+  return `stu_${userId.replace(/-/g, "").slice(0, 4)}`;
+}
+
+function formatClicked(iso: string) {
+  return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function clickToLead(c: ClickRow, providerName: string): LeadRow {
+  return {
+    id: String(c.id),
+    student: pseudoStudent(c.user_id),
+    university: c.school_name ?? "—",
+    provider: providerName,
+    milestone: c.milestone_id ?? "—",
+    clicked: formatClicked(c.created_at),
+  };
+}
 
 export default function LeadsPage() {
   const [uni, setUni] = React.useState("all");
-  const rows = leadEvents.filter((l) => uni === "all" || l.university === uni);
+  const [providers, setProviders] = React.useState<Provider[]>(seedProviders);
+  const [liveRows, setLiveRows] = React.useState<LeadRow[] | null>(null);
+
+  React.useEffect(() => {
+    void Promise.all([loadRecentClicks(), loadProvidersAdmin()]).then(([clicks, providerRows]) => {
+      const mappedProviders =
+        providerRows.length > 0
+          ? providerRows.map((row) => ({
+              id: String((row as { id: string }).id),
+              name: String((row as { name: string }).name),
+              leads: 0,
+            }))
+          : seedProviders.map((p) => ({ id: p.id, name: p.name, leads: p.leads }));
+      if (providerRows.length) {
+        setProviders(
+          providerRows.map((row) => {
+            const r = row as Record<string, unknown>;
+            const name = String(r.name ?? "");
+            return {
+              id: String(r.id),
+              name,
+              category: String(r.category ?? "Loan") as Provider["category"],
+              tagline: String(r.tagline ?? ""),
+              description: String(r.description ?? ""),
+              initials: String(r.initials || name.slice(0, 2).toUpperCase()),
+              color: String(r.color || "#18181B"),
+              rating: Number(r.rating) || 0,
+              reviews: Number(r.reviews) || 0,
+              url: String(r.url || "#"),
+              leads: 0,
+              active: !!r.active,
+            };
+          }),
+        );
+      }
+      const names = Object.fromEntries(mappedProviders.map((p) => [p.id, p.name]));
+      if (clicks.length) {
+        const leadRows = (clicks as ClickRow[]).map((c) => clickToLead(c, names[c.provider_id] ?? c.provider_id));
+        setLiveRows(leadRows);
+        const counts: Record<string, number> = {};
+        for (const c of clicks as ClickRow[]) counts[c.provider_id] = (counts[c.provider_id] ?? 0) + 1;
+        setProviders((prev) =>
+          prev.map((p) => ({
+            ...p,
+            leads: counts[p.id] ?? p.leads,
+          })),
+        );
+      }
+    });
+  }, []);
+
+  const fallbackRows = leadEvents.filter((l) => uni === "all" || l.university === uni);
+  const rows = (liveRows ?? fallbackRows).filter((l) => uni === "all" || l.university === uni);
+  const universities = React.useMemo(() => {
+    const source = liveRows ?? leadEvents;
+    return ["all", ...Array.from(new Set(source.map((l) => l.university).filter((u) => u && u !== "—")))];
+  }, [liveRows]);
   const top = [...providers].sort((a, b) => b.leads - a.leads).slice(0, 6);
 
   return (
@@ -40,10 +136,11 @@ export default function LeadsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All universities</SelectItem>
-            <SelectItem value="UCLA Anderson">UCLA Anderson</SelectItem>
-            <SelectItem value="Bayview">Bayview</SelectItem>
-            <SelectItem value="Northshore">Northshore</SelectItem>
+            {universities.map((u) => (
+              <SelectItem key={u} value={u}>
+                {u === "all" ? "All universities" : u}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select defaultValue="all">
