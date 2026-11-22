@@ -123,9 +123,9 @@ function LoginForm() {
             <Logo />
           </Link>
           <span className="text-[13px] text-muted-foreground">
-            <span className="hidden sm:inline">Have an invite? </span>
+            <span className="hidden sm:inline">New here? </span>
             <Link href="/invite" className="font-medium text-foreground hover:text-primary">
-              Open invite link
+              Create account
             </Link>
           </span>
         </div>
@@ -190,7 +190,17 @@ function LoginForm() {
           </form>
 
           <p className="mt-6 text-center text-[12.5px] text-muted-foreground">
-            New students create an account from their invite link — not from this page.
+            New student?{" "}
+            <Link href="/invite" className="font-medium text-foreground hover:text-primary">
+              Create account
+            </Link>{" "}
+            with your university invite link.
+          </p>
+          <p className="mt-2 text-center text-[12.5px] text-muted-foreground">
+            University admin?{" "}
+            <Link href="/university/login" className="font-medium text-foreground hover:text-primary">
+              Sign in here
+            </Link>
           </p>
         </div>
 
