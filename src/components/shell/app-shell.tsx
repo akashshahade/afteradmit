@@ -24,6 +24,8 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { HelpSheet } from "@/components/shell/help-sheet";
 import { DemoTour, requestTour } from "@/components/shell/demo-tour";
+import { createClient } from "@/lib/supabase/client";
+import { hasSupabaseEnv } from "@/lib/supabase/env";
 
 export type NavIcon = React.ComponentType<{ className?: string; strokeWidth?: number }>;
 export type NavItem = { label: string; href: string; icon: NavIcon; badge?: string | number; exact?: boolean };
@@ -34,7 +36,7 @@ export type ShellUser = { name: string; email: string; initials: string; color?:
 export type ShellNotification = { id: string; title: string; body: string; time: string; unread: boolean };
 
 type AppShellProps = {
-  role: "student" | "admin" | "partner";
+  role: "student" | "admin" | "partner" | "university";
   sections: NavSection[];
   header?: React.ReactNode;
   footer?: React.ReactNode;
@@ -47,7 +49,12 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
-const roleLabel = { student: "Student", admin: "AfterAdmit Admin", partner: "Partner" };
+const roleLabel = {
+  student: "Student",
+  admin: "AfterAdmit Admin",
+  partner: "Partner",
+  university: "University Admin",
+};
 
 function SidebarNav({
   sections,
@@ -209,6 +216,20 @@ export function UserMenu({ user, role, profileHref, billingHref, compact }: Pick
   const router = useRouter();
   const pathname = usePathname();
   const [helpOpen, setHelpOpen] = React.useState(false);
+
+  const signOut = async () => {
+    try {
+      if (hasSupabaseEnv()) {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      }
+    } catch {
+      // Still leave the app even if sign-out fails.
+    }
+    router.push("/login");
+    router.refresh();
+  };
+
   return (
     <>
     <DropdownMenu>
@@ -266,6 +287,7 @@ export function UserMenu({ user, role, profileHref, billingHref, compact }: Pick
         {(
           [
             ["student", "Student", "/student"],
+            ["university", "University Admin", "/university"],
             ["admin", "AfterAdmit Admin", "/admin"],
             ["partner", "Partner", "/partner"],
           ] as const
@@ -276,7 +298,7 @@ export function UserMenu({ user, role, profileHref, billingHref, compact }: Pick
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => router.push("/login")}>
+        <DropdownMenuItem onSelect={() => void signOut()}>
           <LogOut /> Log out
         </DropdownMenuItem>
       </DropdownMenuContent>

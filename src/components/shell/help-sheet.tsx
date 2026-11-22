@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { milestones } from "@/lib/data";
 import { MyRequests } from "@/components/support/my-requests";
 
-type Role = "student" | "admin" | "partner";
+type Role = "student" | "admin" | "partner" | "university";
 type Faq = { q: string; a: string };
 
 const faqs: Record<Role, Faq[]> = {
@@ -39,12 +39,18 @@ const faqs: Record<Role, Faq[]> = {
     { q: "How do I appear on more milestones?", a: "Request placements when editing a listing. AfterAdmit decides final placement per university." },
     { q: "Can I post in the community?", a: "Only in spaces that allow partners, and posts are labelled with a Partner badge. Promotional posts may be removed." },
   ],
+  university: [
+    { q: "How do I invite students?", a: "Go to Invite students, upload a CSV or enter names and emails, then create invites. Share each personal link via the Share button." },
+    { q: "Can I see individual student roadmaps?", a: "You see class-level invite and join status. Detailed individual activity stays private to the student." },
+    { q: "Who creates my university admin account?", a: "AfterAdmit (superadmin) approves and provisions university admins. Contact AfterAdmit if you need access." },
+  ],
 };
 
 const guides: Record<Role, string[]> = {
   student: ["Getting started with your roadmap", "F-1 visa timeline, step by step", "Finding roommates through Spaces", "Using the marketplace safely"],
   admin: ["Launching a new intake term", "Writing visibility rules", "Exporting leads for billing", "Moderation guidelines"],
   partner: ["Writing a listing that converts", "Understanding lead reports", "Billing & invoices", "Partner community guidelines"],
+  university: ["Inviting your admitted class", "Sharing invite links", "Reading class join progress", "When to ask AfterAdmit for help"],
 };
 
 const supportEmail = "info@afteradmit.com";
@@ -96,7 +102,7 @@ export function HelpSheet({ open, onOpenChange, role }: { open: boolean; onOpenC
 
           <section>
             <SectionTitle>Your requests</SectionTitle>
-            <MyRequests owner={role} limit={3} />
+            <MyRequests owner={role === "university" ? "admin" : role} limit={3} />
           </section>
 
           <section>

@@ -6,10 +6,15 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-type Role = "student" | "admin" | "partner";
+type Role = "student" | "admin" | "partner" | "university";
 type Step = { selector: string; title: string; body: string };
 
-const homes: Record<Role, string> = { student: "/student", admin: "/admin", partner: "/partner" };
+const homes: Record<Role, string> = {
+  student: "/student",
+  admin: "/admin",
+  partner: "/partner",
+  university: "/university",
+};
 
 const tours: Record<Role, Step[]> = {
   student: [
@@ -29,6 +34,10 @@ const tours: Record<Role, Step[]> = {
     { selector: '[data-tour="daily"]', title: "Leads, day by day", body: "Every click from a student to your offer, as it happens." },
     { selector: '[data-tour="sources"]', title: "Where students find you", body: "Which roadmap milestones send you students — so you show up at exactly the right moment." },
     { selector: '[data-tour="listings"]', title: "Your listings", body: "Performance for each offer. Student contact details are never shared." },
+  ],
+  university: [
+    { selector: '[data-tour="kpis"]', title: "Your class at a glance", body: "Invited, joined, and pending students for your school." },
+    { selector: 'a[href="/university/invites"]', title: "Invite students", body: "Upload a CSV or add names, create personal invite links, and share them." },
   ],
 };
 

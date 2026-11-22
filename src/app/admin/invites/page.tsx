@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { KpiCard } from "@/components/charts/chart-bits";
 import { universities } from "@/lib/ops-data";
+import { createClient } from "@/lib/supabase/client";
+import { inviteLinkPath, splitName } from "@/lib/invites";
 
 type RowStatus = "ready" | "invalid" | "duplicate" | "existing";
 type Row = { name: string; email: string; program: string; intake: string; status: RowStatus };
@@ -127,6 +129,7 @@ export default function InvitesPage() {
   const [progress, setProgress] = React.useState(0);
   const [dragging, setDragging] = React.useState(false);
   const [filter, setFilter] = React.useState<"All" | "Joined" | "Not joined" | "Bounced">("All");
+  const [createdInvites, setCreatedInvites] = React.useState<{ email: string; token: string }[]>([]);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const ready = rows.filter((r) => r.status === "ready");
@@ -164,26 +167,47 @@ export default function InvitesPage() {
     URL.revokeObjectURL(url);
   };
 
-  const send = () => {
+  const send = async () => {
     setStep("sending");
-    setProgress(0);
-    let p = 0;
-    const tick = () => {
-      p = Math.min(100, p + 9 + Math.random() * 14);
-      setProgress(p);
-      if (p < 100) window.setTimeout(tick, 140);
-      else
-        window.setTimeout(() => {
-          setStep("sent");
-          toast.success(`${ready.length} invites sent`, { description: `${uni.short} · ${uni.terms[0] ?? "Fall 2027"}` });
-        }, 300);
-    };
-    window.setTimeout(tick, 200);
+    setProgress(12);
+    try {
+      const supabase = createClient();
+      const payload = ready.map((r) => {
+        const { first_name, last_name } = splitName(r.name);
+        return {
+          name: r.name,
+          email: r.email,
+          first_name,
+          last_name,
+          program: r.program,
+          intake: r.intake,
+          school_name: uni.name,
+          school_short: uni.short,
+        };
+      });
+
+      setProgress(45);
+      const { data, error } = await supabase.rpc("create_student_invites", { payload });
+      if (error) throw error;
+
+      const created = (Array.isArray(data) ? data : []) as { email: string; token: string }[];
+      setCreatedInvites(created);
+      setProgress(100);
+      setStep("sent");
+      toast.success(`${created.length} invite${created.length === 1 ? "" : "s"} created`, {
+        description: `${uni.short} · copy links below (email delivery comes later)`,
+      });
+    } catch (err) {
+      setStep("review");
+      setProgress(0);
+      toast.error(err instanceof Error ? err.message : "Could not create invites");
+    }
   };
 
   const reset = () => {
     setRows([]);
     setFileName("");
+    setCreatedInvites([]);
     setStep("upload");
   };
 
@@ -378,20 +402,33 @@ export default function InvitesPage() {
               <span className="flex size-12 items-center justify-center rounded-full bg-primary text-white">
                 <Check className="size-5" strokeWidth={3} />
               </span>
-              <div className="mt-4 text-[18px] font-semibold tracking-tight">{ready.length} invites on their way</div>
-              <p className="mt-1 max-w-[400px] text-[13.5px] text-muted-foreground">Students can join from any device. We&apos;ll send a reminder after 5 days to anyone who hasn&apos;t joined.</p>
+              <div className="mt-4 text-[18px] font-semibold tracking-tight">
+                {createdInvites.length} invite{createdInvites.length === 1 ? "" : "s"} ready
+              </div>
+              <p className="mt-1 max-w-[400px] text-[13.5px] text-muted-foreground">
+                Share each personal link with the student. Email delivery can be wired later — for the pilot, copy links directly.
+              </p>
+              {createdInvites[0] && (
+                <p className="mt-4 max-w-[480px] truncate rounded-lg border bg-white px-3 py-2 font-mono text-[11.5px] text-muted-foreground">
+                  {inviteLinkPath(createdInvites[0].token)}
+                </p>
+              )}
               <div className="mt-6 flex flex-wrap justify-center gap-2">
                 <Button variant="outline" onClick={reset}>
                   <UserPlus className="size-4" /> Invite more
                 </Button>
                 <Button
                   variant="ghost"
+                  disabled={!createdInvites.length}
                   onClick={() => {
-                    void navigator.clipboard.writeText(`https://app.afteradmit.com/join/${uni.id}-fall-2027`);
-                    toast.success("Invite link copied");
+                    const links = createdInvites
+                      .map((i) => `${window.location.origin}${inviteLinkPath(i.token)}`)
+                      .join("\n");
+                    void navigator.clipboard.writeText(links);
+                    toast.success(createdInvites.length === 1 ? "Invite link copied" : `${createdInvites.length} invite links copied`);
                   }}
                 >
-                  <Copy className="size-4" /> Copy class invite link
+                  <Copy className="size-4" /> Copy invite link{createdInvites.length === 1 ? "" : "s"}
                 </Button>
               </div>
             </div>

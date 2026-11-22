@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Search, CornerDownLeft, FileText, MessagesSquare, Route, Store, Building2, Users, LayoutDashboard, UserRound } from "lucide-react";
+import { Search, CornerDownLeft, FileText, MessagesSquare, Route, Store, Building2, Users, LayoutDashboard, UserRound, UserPlus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -12,7 +12,7 @@ import { universities, listings } from "@/lib/ops-data";
 
 type Item = { id: string; label: string; hint: string; href: string; group: string; icon: React.ElementType };
 
-function itemsFor(role: "student" | "admin" | "partner"): Item[] {
+function itemsFor(role: "student" | "admin" | "partner" | "university"): Item[] {
   if (role === "student") {
     return [
       { id: "home", label: "Home", hint: "Dashboard", href: "/student", group: "Pages", icon: LayoutDashboard },
@@ -42,6 +42,12 @@ function itemsFor(role: "student" | "admin" | "partner"): Item[] {
       ...universities.map((u) => ({ id: u.id, label: u.name, hint: u.status, href: "/admin/universities", group: "Universities", icon: Building2 })),
     ];
   }
+  if (role === "university") {
+    return [
+      { id: "ov", label: "Overview", hint: "Class progress", href: "/university", group: "Pages", icon: LayoutDashboard },
+      { id: "inv", label: "Invite students", hint: "CSV & share links", href: "/university/invites", group: "Pages", icon: UserPlus },
+    ];
+  }
   return [
     { id: "ov", label: "Overview", hint: "Performance", href: "/partner", group: "Pages", icon: LayoutDashboard },
     { id: "ls", label: "Listings", hint: "Your services", href: "/partner/listings", group: "Pages", icon: Store },
@@ -50,7 +56,7 @@ function itemsFor(role: "student" | "admin" | "partner"): Item[] {
   ];
 }
 
-export function CommandPalette({ open, onOpenChange, role }: { open: boolean; onOpenChange: (o: boolean) => void; role: "student" | "admin" | "partner" }) {
+export function CommandPalette({ open, onOpenChange, role }: { open: boolean; onOpenChange: (o: boolean) => void; role: "student" | "admin" | "partner" | "university" }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showClose={false} className="top-[18%] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-[560px]">
@@ -61,7 +67,7 @@ export function CommandPalette({ open, onOpenChange, role }: { open: boolean; on
   );
 }
 
-function PaletteBody({ role, onClose }: { role: "student" | "admin" | "partner"; onClose: () => void }) {
+function PaletteBody({ role, onClose }: { role: "student" | "admin" | "partner" | "university"; onClose: () => void }) {
   const router = useRouter();
   const [q, setQ] = React.useState("");
   const [active, setActive] = React.useState(0);
