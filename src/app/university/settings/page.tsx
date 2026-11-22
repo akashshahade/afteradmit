@@ -43,7 +43,7 @@ export default function UniversitySettingsPage() {
           setTimezone(row.timezone ?? "America/Los_Angeles");
           setSupportEmail(row.support_email ?? "");
           try {
-            const c = await getSchoolContract(row.name);
+            const c = await getSchoolContract();
             setContract(c as typeof contract);
           } catch {
             setContract(null);

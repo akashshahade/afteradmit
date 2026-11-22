@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "sonner";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +23,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           position="bottom-right"
           toastOptions={{ className: "!rounded-xl !border-border !shadow-lg !text-[13px] !font-sans" }}
         />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

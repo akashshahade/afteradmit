@@ -273,17 +273,10 @@ export async function voteOnPost(postId: string, delta: 1 | -1) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Sign in to vote");
 
-  const { error } = await supabase.from("community_votes").upsert(
-    { user_id: user.id, target_type: "post", target_id: postId, value: delta },
-    { onConflict: "user_id,target_type,target_id" },
-  );
+  const { data, error } = await supabase.rpc("vote_on_post", {
+    p_post_id: postId,
+    p_value: delta,
+  });
   if (error) throw error;
-
-  const { data: post } = await supabase.from("community_posts").select("vote_score").eq("id", postId).maybeSingle();
-  if (post) {
-    await supabase
-      .from("community_posts")
-      .update({ vote_score: Math.max(0, (post.vote_score ?? 0) + delta) })
-      .eq("id", postId);
-  }
+  return typeof data === "number" ? data : undefined;
 }

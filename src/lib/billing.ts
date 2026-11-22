@@ -99,15 +99,15 @@ export async function requestCheckout(planId: string) {
   return data as BillingSubscription;
 }
 
-export async function getSchoolContract(schoolName: string) {
+export async function getSchoolContract(_schoolName?: string) {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("school_contracts")
-    .select("*, billing_plans(name, features)")
-    .eq("school_name", schoolName)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_my_school_contract");
   if (error) throw error;
-  return data;
+  return data as {
+    plan_id: string | null;
+    seats: number;
+    status: string;
+    school_name?: string;
+    billing_plans?: { name?: string; features?: string[] } | null;
+  } | null;
 }

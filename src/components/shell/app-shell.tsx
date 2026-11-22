@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronsUpDown, LogOut, Menu, Search, Settings, CreditCard, UserRound, LifeBuoy, ArrowRightLeft, Check, Compass, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Bell, ChevronsUpDown, LogOut, Menu, Search, Settings, CreditCard, UserRound, LifeBuoy, Compass, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Logo, LogoMark } from "@/components/brand/logo";
@@ -282,21 +282,6 @@ export function UserMenu({ user, role, profileHref, billingHref, compact }: Pick
         <DropdownMenuItem onSelect={() => requestTour(role, pathname, (href) => router.push(href))}>
           <Compass /> Product tour
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Switch workspace</DropdownMenuLabel>
-        {(
-          [
-            ["student", "Student", "/student"],
-            ["university", "University Admin", "/university"],
-            ["admin", "AfterAdmit Admin", "/admin"],
-            ["partner", "Partner", "/partner"],
-          ] as const
-        ).map(([key, label, href]) => (
-          <DropdownMenuItem key={key} onSelect={() => router.push(href)}>
-            <ArrowRightLeft /> {label}
-            {role === key && <Check className="ml-auto !text-primary" />}
-          </DropdownMenuItem>
-        ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => void signOut()}>
           <LogOut /> Log out

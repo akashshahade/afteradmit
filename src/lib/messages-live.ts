@@ -147,11 +147,11 @@ export async function sendDirectMessage(conversationId: string, body: string) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Sign in to message");
-  const { data, error } = await supabase
-    .from("direct_messages")
-    .insert({ conversation_id: conversationId, sender_id: user.id, body })
-    .select("id, conversation_id, sender_id, body, created_at")
-    .single();
+  const { data, error } = await supabase.rpc("send_direct_message", {
+    p_conversation_id: conversationId,
+    p_body: body,
+  });
   if (error) throw error;
-  return data as LiveMessage;
+  const row = (Array.isArray(data) ? data[0] : data) as LiveMessage;
+  return row;
 }
