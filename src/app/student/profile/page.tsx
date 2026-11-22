@@ -50,6 +50,16 @@ import { FormSheet, type FormSheetConfig } from "@/components/shell/form-sheet";
 import { downloadFile } from "@/lib/download";
 import { MyRequests } from "@/components/support/my-requests";
 import { school, student } from "@/lib/data";
+import { useStudent } from "@/components/student/store";
+import { createClient } from "@/lib/supabase/client";
+import { displayName, initials } from "@/lib/auth-profile";
+import {
+  applyOnboardingRules,
+  blankCatalog,
+  progressPayload,
+  type OnboardingAnswers,
+} from "@/lib/student-progress";
+import { COUNTRIES } from "@/lib/countries";
 
 const tabs = [
   { k: "profile", l: "Profile", i: UserRound },
@@ -103,30 +113,69 @@ function ToggleRow({ title, desc, defaultChecked = true }: { title: string; desc
   );
 }
 
-function SaveBar() {
-  return (
-    <div className="flex justify-end gap-2">
-      <Button variant="outline" size="sm" onClick={() => toast("Changes discarded")}>
-        Cancel
-      </Button>
-      <Button variant="ink" size="sm" onClick={() => toast.success("Changes saved")}>
-        Save changes
-      </Button>
-    </div>
-  );
-}
-
 function ProfileTab() {
+  const { profile, refresh } = useStudent();
   const [photo, setPhoto] = React.useState<string | null>(null);
+  const [firstName, setFirstName] = React.useState(profile?.first_name ?? "");
+  const [lastName, setLastName] = React.useState(profile?.last_name ?? "");
+  const [handle, setHandle] = React.useState(profile?.handle ?? "");
+  const [bio, setBio] = React.useState(profile?.bio ?? "");
+  const [hometown, setHometown] = React.useState(profile?.home_city ?? "");
+  const [industry, setIndustry] = React.useState(profile?.industry ?? "consulting");
+  const [linkedin, setLinkedin] = React.useState(profile?.linkedin ?? "");
+  const [saving, setSaving] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!profile) return;
+    setFirstName(profile.first_name ?? "");
+    setLastName(profile.last_name ?? "");
+    setHandle(profile.handle ?? "");
+    setBio(profile.bio ?? "");
+    setHometown(profile.home_city ?? "");
+    setIndustry(profile.industry ?? "consulting");
+    setLinkedin(profile.linkedin ?? "");
+  }, [profile]);
+
+  const save = async () => {
+    if (!profile) return;
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          handle: handle.trim() || null,
+          bio: bio.trim() || null,
+          home_city: hometown.trim() || null,
+          industry,
+          linkedin: linkedin.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
+      if (error) throw error;
+      await refresh();
+      toast.success("Profile saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const color = profile?.avatar_color || student.avatarColor;
+  const av = profile ? initials(profile) : student.initials;
+
   return (
     <div className="space-y-5">
       <Section title="Public profile" description="Visible to classmates in the community.">
         <div className="flex items-center gap-4">
           <Avatar className="size-16">
             {photo && <AvatarImage src={photo} alt="Your profile photo" className="object-cover" />}
-            <AvatarFallback className="text-[20px] text-white" style={{ background: student.avatarColor }}>
-              {student.initials}
+            <AvatarFallback className="text-[20px] text-white" style={{ background: color }}>
+              {av}
             </AvatarFallback>
           </Avatar>
           <div className="flex gap-2">
@@ -154,7 +203,7 @@ function ProfileTab() {
                 const f = e.target.files?.[0];
                 if (f && f.type.startsWith("image/")) {
                   setPhoto(URL.createObjectURL(f));
-                  toast.success("Profile photo updated");
+                  toast.success("Photo ready — save profile to keep other changes");
                 }
                 e.target.value = "";
               }}
@@ -163,23 +212,30 @@ function ProfileTab() {
         </div>
         <Separator className="my-5" />
         <div className="space-y-1 divide-y">
-          <Row label="Display name">
-            <Input defaultValue={student.name} className="max-w-sm" />
+          <Row label="First name">
+            <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="max-w-sm" />
+          </Row>
+          <Row label="Last name">
+            <Input value={lastName} onChange={(e) => setLastName(e.target.value)} className="max-w-sm" />
           </Row>
           <Row label="Username" hint="Used for mentions in Spaces">
             <div className="flex max-w-sm items-center rounded-lg border shadow-xs focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/12">
               <span className="pl-3 text-[13.5px] text-subtle">@</span>
-              <input defaultValue="sayali_d" className="h-9 flex-1 bg-transparent pr-3 text-[13.5px] outline-none" />
+              <input
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
+                className="h-9 flex-1 bg-transparent pr-3 text-[13.5px] outline-none"
+              />
             </div>
           </Row>
           <Row label="Bio">
-            <Textarea defaultValue="Ex-consultant from Mumbai. Incoming MBA '29. Looking for roommates near Westwood and anyone into weekend hikes." className="max-w-xl" />
+            <Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="max-w-xl" placeholder="Where you're from, what you did, what you're looking for…" />
           </Row>
           <Row label="Hometown">
-            <Input defaultValue="Mumbai, India" className="max-w-sm" />
+            <Input value={hometown} onChange={(e) => setHometown(e.target.value)} className="max-w-sm" />
           </Row>
           <Row label="Pre-MBA industry">
-            <Select defaultValue="consulting">
+            <Select value={industry} onValueChange={setIndustry}>
               <SelectTrigger className="w-full max-w-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -192,43 +248,139 @@ function ProfileTab() {
             </Select>
           </Row>
           <Row label="LinkedIn">
-            <Input defaultValue="linkedin.com/in/sayalid" className="max-w-sm" />
+            <Input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} className="max-w-sm" placeholder="linkedin.com/in/…" />
           </Row>
         </div>
       </Section>
-      <SaveBar />
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={() => void refresh()}>
+          Cancel
+        </Button>
+        <Button variant="ink" size="sm" disabled={saving} onClick={() => void save()}>
+          {saving ? "Saving…" : "Save changes"}
+        </Button>
+      </div>
     </div>
   );
 }
 
 function JourneyTab() {
+  const { profile, refresh } = useStudent();
+  const [country, setCountry] = React.useState(profile?.home_country ?? "India");
+  const [visa, setVisa] = React.useState(profile?.visa_type ?? "F-1");
+  const [housing, setHousing] = React.useState(profile?.housing ?? "Off-campus");
+  const [dependents, setDependents] = React.useState(profile?.dependents ? "Yes" : "No");
+  const [funding, setFunding] = React.useState<string[]>(profile?.funding ?? []);
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!profile) return;
+    setCountry(profile.home_country ?? "India");
+    setVisa(profile.visa_type ?? "F-1");
+    setHousing(profile.housing ?? "Off-campus");
+    setDependents(profile.dependents ? "Yes" : "No");
+    setFunding(profile.funding ?? []);
+  }, [profile]);
+
+  const persistJourney = async (next: {
+    country: string;
+    visa: string;
+    housing: string;
+    dependents: string;
+    funding: string[];
+  }) => {
+    if (!profile) return;
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      const answers: OnboardingAnswers = {
+        program: profile.program ?? "Full-Time MBA",
+        country: next.country,
+        visa: next.visa,
+        funding: next.funding,
+        dependents: next.dependents === "Yes",
+        housing: next.housing,
+        offerAccepted: !!profile.offer_accepted,
+      };
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          home_country: next.country,
+          visa_type: next.visa,
+          housing: next.housing,
+          dependents: next.dependents === "Yes",
+          funding: next.funding,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
+      if (error) throw error;
+
+      const list = applyOnboardingRules(blankCatalog(), answers);
+      const rows = progressPayload(list).map((r) => ({
+        user_id: profile.id,
+        milestone_id: r.milestone_id,
+        status: r.status,
+        completed_at: r.completed_at,
+        tasks: r.tasks,
+        updated_at: new Date().toISOString(),
+      }));
+      await supabase.from("milestone_progress").upsert(rows, { onConflict: "user_id,milestone_id" });
+      await refresh();
+      toast.success("Roadmap updated", { description: "Milestones were added or hidden to match." });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update journey");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleFunding = (label: string) => {
+    const next = funding.includes(label) ? funding.filter((f) => f !== label) : [...funding, label];
+    setFunding(next);
+    void persistJourney({ country, visa, housing, dependents, funding: next });
+  };
+
   return (
     <div className="space-y-5">
       <Section title="Journey answers" description="These personalize your roadmap. Completed milestones are kept when you change an answer.">
         <div className="space-y-1 divide-y">
           <Row label="University">
             <div className="flex items-center gap-2 text-[13.5px]">
-              {school.fullName} <Badge variant="secondary">Managed by school</Badge>
+              {profile?.school_name || school.fullName} <Badge variant="secondary">Managed by school</Badge>
             </div>
           </Row>
           <Row label="Program & term">
             <div className="text-[13.5px]">
-              {school.program} · {school.term}
+              {profile?.program || school.program} · {profile?.intake || school.term}
             </div>
           </Row>
-          {[
-            ["Home country", "India", ["India", "China", "United States", "Other"]],
-            ["Visa type", "F-1", ["F-1", "J-1", "Domestic"]],
-            ["Housing preference", "Off-campus", ["Off-campus", "On-campus", "Not sure yet"]],
-            ["Bringing dependents", "No", ["No", "Yes"]],
-          ].map(([label, value, opts]) => (
-            <Row key={label as string} label={label as string}>
-              <Select defaultValue={value as string} onValueChange={() => toast("Roadmap updated", { description: "Milestones were added or hidden to match." })}>
+          {(
+            [
+              ["Home country", country, setCountry, [...COUNTRIES] as string[]],
+              ["Visa type", visa, setVisa, ["F-1", "J-1", "Domestic"]],
+              ["Housing preference", housing, setHousing, ["Off-campus", "On-campus", "Not sure yet"]],
+              ["Bringing dependents", dependents, setDependents, ["No", "Yes"]],
+            ] as const
+          ).map(([label, value, setter, opts]) => (
+            <Row key={label} label={label}>
+              <Select
+                value={value}
+                disabled={saving}
+                onValueChange={(v) => {
+                  setter(v);
+                  const payload = { country, visa, housing, dependents, funding };
+                  if (label === "Home country") payload.country = v;
+                  if (label === "Visa type") payload.visa = v;
+                  if (label === "Housing preference") payload.housing = v;
+                  if (label === "Bringing dependents") payload.dependents = v;
+                  void persistJourney(payload);
+                }}
+              >
                 <SelectTrigger className="w-full max-w-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(opts as string[]).map((o) => (
+                  {opts.map((o) => (
                     <SelectItem key={o} value={o}>
                       {o}
                     </SelectItem>
@@ -239,9 +391,23 @@ function JourneyTab() {
           ))}
           <Row label="Funding sources" hint="Select all that apply">
             <div className="flex flex-wrap gap-1.5">
-              {["Scholarship", "Loan", "Sponsor", "Self-funded"].map((f) => (
-                <FundingChip key={f} label={f} initial={student.profile.funding.includes(f)} />
-              ))}
+              {["Scholarship", "Loan", "Sponsor / employer", "Self-funded"].map((f) => {
+                const on = funding.some((x) => x.toLowerCase().includes(f.split(" ")[0].toLowerCase()) || x === f);
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    disabled={saving}
+                    onClick={() => toggleFunding(f)}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-[12.5px] font-medium transition-colors",
+                      on ? "border-ink bg-ink text-white" : "hover:bg-muted",
+                    )}
+                  >
+                    {f}
+                  </button>
+                );
+              })}
             </div>
           </Row>
         </div>
@@ -250,25 +416,8 @@ function JourneyTab() {
   );
 }
 
-function FundingChip({ label, initial }: { label: string; initial: boolean }) {
-  const [on, setOn] = React.useState(initial);
-  return (
-    <button
-      onClick={() => {
-        setOn((v) => !v);
-        toast("Roadmap updated");
-      }}
-      className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-medium transition-colors",
-        on ? "border-ink bg-ink text-white" : "text-muted-foreground hover:border-[#d4d4d8]",
-      )}
-    >
-      {on && <Check className="size-3.5" strokeWidth={3} />} {label}
-    </button>
-  );
-}
-
 function AccountTab() {
+  const { profile } = useStudent();
   const [sessions, setSessions] = React.useState([
     { icon: Laptop, d: "MacBook Air · Chrome", l: "Mumbai, IN", t: "Current session", cur: true },
     { icon: Smartphone, d: "iPhone 15 · Safari", l: "Mumbai, IN", t: "2 hours ago", cur: false },
@@ -279,7 +428,7 @@ function AccountTab() {
         <div className="space-y-1 divide-y">
           <Row label="Sign-in email">
             <div className="flex max-w-md items-center gap-2">
-              <Input defaultValue={student.email} />
+              <Input defaultValue={profile?.email ?? student.email} readOnly />
               <Badge variant="success">Verified</Badge>
             </div>
           </Row>
@@ -636,20 +785,26 @@ function ConnectionsTab() {
 function ProfileInner() {
   const router = useRouter();
   const params = useSearchParams();
+  const { profile } = useStudent();
   const tab = (tabs.find((t) => t.k === params.get("tab"))?.k ?? "profile") as Tab;
+  const name = profile ? displayName(profile) : student.name;
+  const handle = profile?.handle ? `@${profile.handle}` : "@student";
+  const color = profile?.avatar_color || student.avatarColor;
+  const av = profile ? initials(profile) : student.initials;
 
   return (
     <PageContainer className="max-w-[1100px]">
       <div className="flex items-center gap-4">
         <Avatar className="size-14">
-          <AvatarFallback className="text-[18px] text-white" style={{ background: student.avatarColor }}>
-            {student.initials}
+          <AvatarFallback className="text-[18px] text-white" style={{ background: color }}>
+            {av}
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-ink">{student.name}</h1>
+          <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-ink">{name}</h1>
           <div className="text-[13px] text-muted-foreground">
-            @sayali_d · {school.name} · {school.program} {school.termShort} · {student.karma} karma
+            {handle} · {profile?.school_name || school.name} · {profile?.program || school.program}{" "}
+            {profile?.intake || school.termShort}
           </div>
         </div>
       </div>

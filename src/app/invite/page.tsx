@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, CalendarDays, Clock, Eye, EyeOff, MailCheck, ShieldCheck } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Clock, Eye, EyeOff, MailCheck, ShieldCheck } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
 import { daysUntil, type InviteRecord } from "@/lib/invites";
+import { isPasswordStrong, PASSWORD_RULES, passwordChecks, passwordScore } from "@/lib/password";
+import { cn } from "@/lib/utils";
 
 function InviteBody() {
   const router = useRouter();
@@ -72,7 +74,13 @@ function InviteBody() {
         }
       } catch (err) {
         if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : "Could not load invite");
+          const msg =
+            err instanceof Error
+              ? err.message
+              : err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
+                ? (err as { message: string }).message
+                : "Could not load invite";
+          setLoadError(msg);
         }
       } finally {
         if (!cancelled) setLoadingInvite(false);
@@ -91,8 +99,10 @@ function InviteBody() {
       toast.error("Accept the terms and privacy policy");
       return;
     }
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (!isPasswordStrong(password)) {
+      toast.error("Choose a stronger password", {
+        description: "Use 8+ characters with upper, lower, number, and a symbol.",
+      });
       return;
     }
 
@@ -249,9 +259,9 @@ function InviteBody() {
                   className="h-9 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="Create a strong password"
                   required
-                  minLength={6}
+                  minLength={8}
                 />
                 <button
                   type="button"
@@ -262,14 +272,37 @@ function InviteBody() {
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
-              <div className="flex gap-1 pt-0.5">
-                {[1, 2, 3, 4].map((i) => (
-                  <span
-                    key={i}
-                    className={`h-1 flex-1 rounded-full ${password.length >= i * 2 ? "bg-primary" : "bg-muted"}`}
-                  />
-                ))}
+              <div className="flex gap-1 pt-1">
+                {[1, 2, 3, 4, 5].map((i) => {
+                  const score = passwordScore(password);
+                  return (
+                    <span
+                      key={i}
+                      className={cn(
+                        "h-1 flex-1 rounded-full transition-colors",
+                        score >= i ? (score >= 5 ? "bg-success" : score >= 3 ? "bg-primary" : "bg-warning") : "bg-muted",
+                      )}
+                    />
+                  );
+                })}
               </div>
+              <ul className="mt-2 space-y-1">
+                {PASSWORD_RULES.map((rule) => {
+                  const ok = passwordChecks(password)[rule.key];
+                  return (
+                    <li
+                      key={rule.key}
+                      className={cn(
+                        "flex items-center gap-1.5 text-[11.5px]",
+                        ok ? "text-success" : "text-muted-foreground",
+                      )}
+                    >
+                      <Check className={cn("size-3", ok ? "opacity-100" : "opacity-30")} strokeWidth={3} />
+                      {rule.label}
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
             <div className="space-y-2 pt-0.5">
               <label className="flex items-start gap-2 text-[12px] leading-snug text-muted-foreground">
@@ -292,7 +325,13 @@ function InviteBody() {
                 </span>
               </label>
             </div>
-            <Button type="submit" variant="ink" size="lg" className="w-full" disabled={!terms || !privacy || submitting}>
+            <Button
+              type="submit"
+              variant="ink"
+              size="lg"
+              className="w-full"
+              disabled={!terms || !privacy || submitting || !isPasswordStrong(password)}
+            >
               {submitting ? "Creating account…" : "Create account"}
               {!submitting && <ArrowRight className="size-4" />}
             </Button>

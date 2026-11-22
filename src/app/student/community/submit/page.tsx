@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { CommunityIcon } from "@/components/community/post-card";
 import { communities } from "@/lib/community-data";
 import { milestones } from "@/lib/data";
+import { createClient } from "@/lib/supabase/client";
 
 const flairs = ["Question", "Looking", "Offering", "Guide", "Interview experience", "Meetup"];
 
@@ -30,6 +31,7 @@ function SubmitInner() {
   const [options, setOptions] = React.useState(["", ""]);
   const [body, setBody] = React.useState("");
   const [images, setImages] = React.useState<string[]>([]);
+  const [publishing, setPublishing] = React.useState(false);
   const bodyRef = React.useRef<HTMLTextAreaElement>(null);
   const imageRef = React.useRef<HTMLInputElement>(null);
 
@@ -242,13 +244,39 @@ function SubmitInner() {
           </Button>
           <Button
             className="rounded-full px-5"
-            disabled={!title.trim()}
+            disabled={!title.trim() || publishing}
             onClick={() => {
-              toast.success("Post published", { description: `Posted to a/${community}` });
-              router.push(`/student/community/c/${community}`);
+              void (async () => {
+                setPublishing(true);
+                try {
+                  const supabase = createClient();
+                  const {
+                    data: { user },
+                  } = await supabase.auth.getUser();
+                  if (!user) throw new Error("Sign in to post");
+                  const { error } = await supabase.from("community_posts").insert({
+                    author_id: user.id,
+                    space_id: community,
+                    title: title.trim(),
+                    body: body.trim() || "",
+                    flair,
+                    flair_color: "#0F766E",
+                    milestone_id: milestone === "none" ? null : milestone,
+                    post_type: type,
+                    poll_options: type === "poll" ? options.filter((o) => o.trim()) : null,
+                  });
+                  if (error) throw error;
+                  toast.success("Post published", { description: `Posted to a/${community}` });
+                  router.push(`/student/community`);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Could not publish");
+                } finally {
+                  setPublishing(false);
+                }
+              })();
             }}
           >
-            Post
+            {publishing ? "Posting…" : "Post"}
           </Button>
         </div>
       </div>

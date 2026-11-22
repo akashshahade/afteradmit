@@ -11,16 +11,22 @@ import { ActivityRings } from "@/components/charts/activity-rings";
 import { PageContainer } from "@/components/shell/app-shell";
 import { useStudent } from "@/components/student/store";
 import { DueBadge, StatusIcon } from "@/components/student/milestone-bits";
+import { displayName } from "@/lib/auth-profile";
 import { daysBetween, isOverdue, RING_COLORS, school, stages, student, TODAY } from "@/lib/data";
 
 const ORANGE = "#FF4500";
 const INK = "#18181B";
 
 export default function StudentDashboard() {
-  const { milestones, stats, setStatus } = useStudent();
+  const { milestones, stats, setStatus, profile, programDates } = useStudent();
   const [activeRing, setActiveRing] = React.useState<number | null>(null);
+  const firstName =
+    profile?.first_name?.trim() ||
+    displayName(profile ?? { first_name: "", last_name: "", email: "there" }).split(" ")[0] ||
+    student.firstName;
 
-  const daysToStart = daysBetween(TODAY, school.dates.programStart);
+  const programStart = programDates?.program_start ?? school.dates.programStart;
+  const daysToStart = daysBetween(TODAY, programStart);
   const thisMonth = milestones.filter((m) => m.due.startsWith("2027-05"));
   const monthDone = thisMonth.filter((m) => m.status === "done").length;
   const doneList = milestones.filter((m) => m.status === "done");
@@ -38,11 +44,16 @@ export default function StudentDashboard() {
   }).length;
 
   const nextDeadline = [
-    { label: "Housing deadline", date: school.dates.housingDeadline },
-    { label: "Health forms", date: school.dates.healthFormDeadline },
-    { label: "Insurance waiver", date: school.dates.insuranceWaiverDeadline },
-    { label: "Orientation", date: school.dates.orientation },
-  ].find((d) => daysBetween(TODAY, d.date) >= 0)!;
+    { label: "Housing deadline", date: programDates?.housing_deadline ?? school.dates.housingDeadline },
+    { label: "Health forms", date: programDates?.health_form_deadline ?? school.dates.healthFormDeadline },
+    { label: "Insurance waiver", date: programDates?.insurance_waiver_deadline ?? school.dates.insuranceWaiverDeadline },
+    { label: "Orientation", date: programDates?.orientation_date ?? school.dates.orientation },
+  ]
+    .filter((d): d is { label: string; date: string } => !!d.date)
+    .find((d) => daysBetween(TODAY, d.date) >= 0) ?? {
+    label: "Program start",
+    date: programStart,
+  };
 
   const TRACK = "#F1F1F3";
   const rings = [
@@ -51,15 +62,15 @@ export default function StudentDashboard() {
     { label: "On time", sub: "Finished before the due date", value: onTimePct / 100, display: `${onTimePct}%`, color: RING_COLORS.onTime, track: TRACK },
   ];
 
-  const journeyDays = daysBetween(student.joined, school.dates.programStart);
-  const elapsed = journeyDays - daysToStart;
+  const journeyDays = Math.max(daysBetween(student.joined, programStart), 1);
+  const elapsed = Math.max(journeyDays - daysToStart, 0);
 
   return (
     <PageContainer className="max-w-[1080px]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-[22px] font-semibold tracking-[-0.03em] text-ink sm:text-[26px]">
-            Good morning, {student.firstName}
+            Good morning, {firstName}
             <span role="img" aria-label="waving hand" className="inline-block origin-[70%_70%] animate-[wave_1.8s_ease-in-out_0.4s_1]">
               👋
             </span>
@@ -86,7 +97,9 @@ export default function StudentDashboard() {
           <div className="p-5 sm:p-7">
             <div className="flex items-baseline justify-between gap-3">
               <div className="text-[14px] font-semibold tracking-tight">Journey progress</div>
-              <div className="text-[12px] text-muted-foreground">Personalized for F-1 · loan · off-campus</div>
+              <div className="text-[12px] text-muted-foreground">
+                Personalized for {[profile?.visa_type, profile?.housing].filter(Boolean).join(" · ") || "your journey"}
+              </div>
             </div>
 
             <div className="mt-6 flex flex-col items-center gap-7 sm:flex-row sm:gap-10">
@@ -125,7 +138,8 @@ export default function StudentDashboard() {
           <div className="relative flex flex-col border-t p-5 sm:p-7 md:border-l md:border-t-0">
             <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-primary/[0.07] blur-2xl" />
             <div className="relative flex items-center gap-1.5 text-[12px] text-muted-foreground">
-              <CalendarDays className="size-3.5" /> Program starts {formatDate(school.dates.programStart, { month: "short", day: "numeric" })}
+              <CalendarDays className="size-3.5" /> Program starts {formatDate(programStart, { month: "short", day: "numeric", year: "numeric" })}
+              {programDates?.batch_name ? ` · ${programDates.batch_name}` : ""}
             </div>
             <div className="relative mt-2 flex items-baseline gap-1.5">
               <span className="tabular text-[32px] font-semibold leading-none tracking-[-0.035em] text-ink">{daysToStart}</span>

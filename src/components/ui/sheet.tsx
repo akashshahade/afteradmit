@@ -22,9 +22,12 @@ function SheetContent({
       <SheetPrimitive.Content
         className={cn(
           "fixed z-50 flex flex-col bg-background shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:duration-300",
-          side === "right" && "inset-y-0 right-0 h-full w-full border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-md",
-          side === "left" && "inset-y-0 left-0 h-full w-full border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-md",
-          side === "bottom" && "inset-x-0 bottom-0 max-h-[90dvh] rounded-t-2xl border-t pb-[env(safe-area-inset-bottom)] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+          side === "right" &&
+            "inset-y-0 right-0 h-full w-full border-l-2 border-[#e4e4e7] shadow-[-12px_0_40px_-18px_rgba(18,18,20,0.28)] data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-md",
+          side === "left" &&
+            "inset-y-0 left-0 h-full w-full border-r-2 border-[#e4e4e7] shadow-[12px_0_40px_-18px_rgba(18,18,20,0.28)] data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-md",
+          side === "bottom" &&
+            "inset-x-0 bottom-0 max-h-[90dvh] rounded-t-2xl border-t-2 border-[#e4e4e7] pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_40px_-18px_rgba(18,18,20,0.28)] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
           className,
         )}
         {...props}

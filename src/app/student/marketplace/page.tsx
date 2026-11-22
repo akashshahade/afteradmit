@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PageContainer } from "@/components/shell/app-shell";
 import { milestones, providers, type Provider } from "@/lib/data";
+import { createClient } from "@/lib/supabase/client";
 
 const categories = ["All", "Loan", "Housing", "Banking", "Insurance", "Remittance", "Phone", "Travel", "Visa", "Moving"] as const;
 
@@ -135,9 +136,25 @@ export default function MarketplacePage() {
               <Button
                 variant="ink"
                 onClick={() => {
-                  window.open(`/go/${leaving.id}?ref=afteradmit&s=ucla`, "_blank", "noopener");
-                  toast(`Opened ${leaving.name} in a new tab`, { description: "Lead recorded · ref=afteradmit&s=ucla" });
-                  setLeaving(null);
+                  void (async () => {
+                    try {
+                      const supabase = createClient();
+                      const {
+                        data: { user },
+                      } = await supabase.auth.getUser();
+                      if (user) {
+                        await supabase.from("marketplace_clicks").insert({
+                          user_id: user.id,
+                          provider_id: leaving.id,
+                        });
+                      }
+                    } catch {
+                      // still open provider even if click logging fails
+                    }
+                    window.open(`/go/${leaving.id}?ref=afteradmit&s=ucla`, "_blank", "noopener");
+                    toast(`Opened ${leaving.name} in a new tab`, { description: "Visit recorded" });
+                    setLeaving(null);
+                  })();
                 }}
               >
                 Continue <ArrowUpRight className="size-4" />

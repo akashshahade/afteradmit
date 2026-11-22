@@ -6,6 +6,7 @@ import {
   AlertCircle,
   ArrowLeft,
   Check,
+  Copy,
   Download,
   FileSpreadsheet,
   Send,
@@ -21,10 +22,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { inviteLinkPath, splitName } from "@/lib/invites";
 import { shareInviteLink } from "@/lib/share";
 import type { Profile } from "@/lib/auth-profile";
+import type { AdmissionBatch } from "@/lib/university-batches";
+import { formatDate } from "@/lib/utils";
 
 type RowStatus = "ready" | "invalid" | "duplicate";
 type Row = { name: string; email: string; program: string; intake: string; status: RowStatus };
@@ -107,6 +111,8 @@ function Stepper({ step }: { step: Step }) {
 
 export default function UniversityInvitesPage() {
   const [profile, setProfile] = React.useState<Profile | null>(null);
+  const [batches, setBatches] = React.useState<AdmissionBatch[]>([]);
+  const [batchId, setBatchId] = React.useState<string>("");
   const [step, setStep] = React.useState<Step>("upload");
   const [rows, setRows] = React.useState<Row[]>([]);
   const [fileName, setFileName] = React.useState("");
@@ -123,10 +129,29 @@ export default function UniversityInvitesPage() {
   React.useEffect(() => {
     (async () => {
       const supabase = createClient();
-      const { data } = await supabase.rpc("get_my_profile");
+      const [{ data }, { data: batchData }] = await Promise.all([
+        supabase.rpc("get_my_profile"),
+        supabase.rpc("list_school_batches"),
+      ]);
       setProfile((Array.isArray(data) ? data[0] : data) as Profile | null);
+      const list = (batchData as AdmissionBatch[]) ?? [];
+      setBatches(list);
+      const active = list.find((b) => b.is_active) ?? list[0];
+      if (active) {
+        setBatchId(active.id);
+        setOneProgram(active.program);
+        setOneIntake(active.name);
+      }
     })();
   }, []);
+
+  const selectedBatch = batches.find((b) => b.id === batchId);
+
+  React.useEffect(() => {
+    if (!selectedBatch) return;
+    setOneProgram(selectedBatch.program);
+    setOneIntake(selectedBatch.name);
+  }, [selectedBatch]);
 
   const ready = rows.filter((r) => r.status === "ready");
   const issues = rows.length - ready.length;
@@ -138,12 +163,19 @@ export default function UniversityInvitesPage() {
     payload: Record<string, string>[],
     opts?: { onErrorStep?: Step },
   ) => {
+    if (!batchId) {
+      toast.error("Select a batch before inviting");
+      return null;
+    }
     setStep("sending");
     setProgress(20);
     try {
       const supabase = createClient();
       setProgress(55);
-      const { data, error } = await supabase.rpc("create_student_invites", { payload });
+      const { data, error } = await supabase.rpc("create_student_invites", {
+        payload,
+        p_batch_id: batchId,
+      });
       if (error) throw error;
       const created = (Array.isArray(data) ? data : []) as Created[];
       if (!created.length) {
@@ -255,10 +287,20 @@ export default function UniversityInvitesPage() {
     setStep("upload");
   };
 
+  const inviteUrl = (token: string) => `${window.location.origin}${inviteLinkPath(token)}`;
+
+  const copyOne = async (item: Created) => {
+    try {
+      await navigator.clipboard.writeText(inviteUrl(item.token));
+      toast.success("Invite link copied");
+    } catch {
+      toast.error("Could not copy link");
+    }
+  };
+
   const shareOne = async (item: Created) => {
-    const url = `${window.location.origin}${inviteLinkPath(item.token)}`;
     const result = await shareInviteLink({
-      url,
+      url: inviteUrl(item.token),
       studentName: item.name || item.first_name || item.email,
       schoolName,
     });
@@ -273,10 +315,21 @@ export default function UniversityInvitesPage() {
       await shareOne(createdInvites[0]);
       return;
     }
-    const links = createdInvites.map((i) => `${i.email}: ${window.location.origin}${inviteLinkPath(i.token)}`).join("\n");
+    const links = createdInvites.map((i) => `${i.email}: ${inviteUrl(i.token)}`).join("\n");
     try {
       await navigator.clipboard.writeText(links);
       toast.success(`${createdInvites.length} invite links copied`);
+    } catch {
+      toast.error("Could not copy links");
+    }
+  };
+
+  const copyAll = async () => {
+    if (!createdInvites.length) return;
+    const links = createdInvites.map((i) => inviteUrl(i.token)).join("\n");
+    try {
+      await navigator.clipboard.writeText(links);
+      toast.success(createdInvites.length === 1 ? "Invite link copied" : `${createdInvites.length} invite links copied`);
     } catch {
       toast.error("Could not copy links");
     }
@@ -296,6 +349,33 @@ export default function UniversityInvitesPage() {
       />
 
       <Card className="mt-6">
+        <CardHeader className="border-b pb-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-1.5">
+              <CardTitle>Batch for these invites</CardTitle>
+              <CardDescription>
+                Students inherit this cohort&apos;s program and start date
+                {selectedBatch ? ` (${formatDate(selectedBatch.program_start)})` : ""}.
+              </CardDescription>
+            </div>
+            <Select value={batchId} onValueChange={setBatchId}>
+              <SelectTrigger className="w-full sm:w-[280px]">
+                <SelectValue placeholder="Select batch" />
+              </SelectTrigger>
+              <SelectContent>
+                {batches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name} · {b.program}
+                    {b.is_active ? " (active)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <Card className="mt-4">
         <CardHeader className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>New invites</CardTitle>
@@ -521,8 +601,11 @@ export default function UniversityInvitesPage() {
                   <Button variant="outline" onClick={reset}>
                     <UserPlus className="size-4" /> Invite more
                   </Button>
+                  <Button variant="outline" disabled={!createdInvites.length} onClick={() => void copyAll()}>
+                    <Copy className="size-4" /> Copy {createdInvites.length === 1 ? "link" : "all links"}
+                  </Button>
                   <Button variant="ink" disabled={!createdInvites.length} onClick={() => void shareAll()}>
-                    <Share2 className="size-4" /> Share {createdInvites.length === 1 ? "invite" : "all links"}
+                    <Share2 className="size-4" /> Share {createdInvites.length === 1 ? "invite" : "all"}
                   </Button>
                 </div>
               </div>
@@ -533,7 +616,7 @@ export default function UniversityInvitesPage() {
                     <TableRow>
                       <TableHead>Email</TableHead>
                       <TableHead className="hidden md:table-cell">Link</TableHead>
-                      <TableHead className="text-right">Share</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -544,9 +627,14 @@ export default function UniversityInvitesPage() {
                           {inviteLinkPath(i.token)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="xs" variant="outline" onClick={() => void shareOne(i)}>
-                            <Share2 className="size-3.5" /> Share
-                          </Button>
+                          <div className="flex justify-end gap-1.5">
+                            <Button size="xs" variant="outline" onClick={() => void copyOne(i)}>
+                              <Copy className="size-3.5" /> Copy
+                            </Button>
+                            <Button size="xs" variant="outline" onClick={() => void shareOne(i)}>
+                              <Share2 className="size-3.5" /> Share
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

@@ -65,8 +65,26 @@ function LoginForm() {
       });
       if (error) throw error;
 
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { data: profile } = user
+        ? await supabase.from("profiles").select("role, onboarding_completed_at").eq("id", user.id).maybeSingle()
+        : { data: null };
+
+      let destination = nextPath;
+      if (profile?.role === "university_admin") {
+        destination = nextPath.startsWith("/university") ? nextPath : "/university";
+      } else if (profile?.role === "admin") {
+        destination = nextPath.startsWith("/admin") ? nextPath : "/admin";
+      } else if (!profile?.onboarding_completed_at) {
+        destination = "/onboarding";
+      } else if (!nextPath.startsWith("/student") && !nextPath.startsWith("/onboarding")) {
+        destination = "/student";
+      }
+
       toast.success("Signed in");
-      router.replace(nextPath);
+      router.replace(destination);
       router.refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong";

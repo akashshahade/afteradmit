@@ -160,10 +160,30 @@ function Repliers({ post }: { post: Post }) {
   );
 }
 
-export function PostCard({ post, showCommunity = true }: { post: Post; showCommunity?: boolean }) {
+export function PostCard({
+  post,
+  showCommunity = true,
+  membersOverride,
+}: {
+  post: Post;
+  showCommunity?: boolean;
+  membersOverride?: Record<string, Member>;
+}) {
   const router = useRouter();
   const [state, setState] = React.useState({ pinned: !!post.pinned, locked: !!post.locked, removed: false, deleted: false, saved: false });
-  const author = members[post.author];
+  const directory = membersOverride ?? members;
+  const author =
+    directory[post.author] ??
+    members[post.author] ??
+    ({
+      id: post.author,
+      name: "Classmate",
+      handle: "classmate",
+      initials: "CL",
+      color: "#18181B",
+      program: "",
+      from: "",
+    } satisfies Member);
   const isOwn = post.author === ME;
   const isMod = MOD_OF.includes(post.community);
   const ms = post.milestone ? milestones.find((m) => m.id === post.milestone) : undefined;

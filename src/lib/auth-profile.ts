@@ -9,6 +9,20 @@ export type Profile = {
   school_name: string | null;
   program: string | null;
   intake: string | null;
+  onboarding_completed_at?: string | null;
+  home_country?: string | null;
+  home_city?: string | null;
+  visa_type?: string | null;
+  funding?: string[] | null;
+  dependents?: boolean | null;
+  housing?: string | null;
+  offer_accepted?: boolean | null;
+  avatar_color?: string | null;
+  handle?: string | null;
+  bio?: string | null;
+  linkedin?: string | null;
+  industry?: string | null;
+  batch_id?: string | null;
 };
 
 export function displayName(profile: Pick<Profile, "first_name" | "last_name" | "email">) {

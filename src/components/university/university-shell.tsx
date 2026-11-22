@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, UserPlus } from "lucide-react";
+import { LayoutDashboard, Layers, Settings, UserPlus } from "lucide-react";
 
 import { AppShell, type NavSection } from "@/components/shell/app-shell";
+import { WorkspaceSkeleton } from "@/components/shell/workspace-skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { displayName, initials, type Profile } from "@/lib/auth-profile";
 
@@ -12,7 +13,9 @@ const sections: NavSection[] = [
   {
     items: [
       { label: "Overview", href: "/university", icon: LayoutDashboard, exact: true },
+      { label: "Batches", href: "/university/batches", icon: Layers },
       { label: "Invite students", href: "/university/invites", icon: UserPlus },
+      { label: "Settings", href: "/university/settings", icon: Settings },
     ],
   },
 ];
@@ -47,11 +50,7 @@ export function UniversityShell({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   if (!ready || !profile) {
-    return (
-      <div className="grid min-h-dvh place-items-center bg-white text-[13px] text-muted-foreground">
-        Loading workspace…
-      </div>
-    );
+    return <WorkspaceSkeleton label="Loading university workspace…" />;
   }
 
   const name = displayName(profile);
@@ -76,7 +75,7 @@ export function UniversityShell({ children }: { children: React.ReactNode }) {
         subtitle: school,
       }}
       notifications={[]}
-      profileHref="/university"
+      profileHref="/university/profile"
     >
       {children}
     </AppShell>

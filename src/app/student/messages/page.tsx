@@ -2,44 +2,131 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Search, Send, Paperclip, Smile, Ellipsis, PenSquare, Phone, Info, BellOff, Ban, Flag, Trash2, ArrowLeft } from "lucide-react";
+import { Search, Send, Ellipsis, PenSquare, ArrowLeft, UserPlus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/community/post-card";
-import { conversations as seed, members } from "@/lib/community-data";
+import { useStudent } from "@/components/student/store";
+import { createClient } from "@/lib/supabase/client";
+import {
+  classmateToMember,
+  listClassmates,
+  loadConversations,
+  sendDirectMessage,
+  startConversation,
+  type Classmate,
+  type LiveConversation,
+} from "@/lib/messages-live";
 
 export default function MessagesPage() {
-  const [convos, setConvos] = React.useState(seed);
-  const [activeId, setActiveId] = React.useState(seed[0].id);
+  const { profile } = useStudent();
+  const [convos, setConvos] = React.useState<LiveConversation[]>([]);
+  const [activeId, setActiveId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState("");
   const [q, setQ] = React.useState("");
   const [mobileChat, setMobileChat] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+  const [classmates, setClassmates] = React.useState<Classmate[]>([]);
   const endRef = React.useRef<HTMLDivElement>(null);
-  const active = convos.find((c) => c.id === activeId)!;
-  const other = members[active.with];
+  const me = profile?.id;
+
+  const refresh = React.useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const list = await loadConversations(user.id);
+      setConvos(list);
+      setActiveId((cur) => cur ?? list[0]?.id ?? null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not load messages");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const active = convos.find((c) => c.id === activeId) ?? null;
+  const other = active ? classmateToMember(active.other) : null;
 
   React.useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [activeId, active.messages.length]);
+  }, [activeId, active?.messages.length]);
 
-  const send = () => {
-    if (!draft.trim()) return;
-    setConvos((cs) => cs.map((c) => (c.id === activeId ? { ...c, last: draft, time: "now", messages: [...c.messages, { from: "priya", body: draft, time: "Just now" }] } : c)));
+  const send = async () => {
+    if (!draft.trim() || !activeId) return;
+    const body = draft.trim();
     setDraft("");
+    try {
+      const msg = await sendDirectMessage(activeId, body);
+      setConvos((cs) =>
+        cs.map((c) =>
+          c.id === activeId
+            ? { ...c, last: body, time: "now", messages: [...c.messages, msg] }
+            : c,
+        ),
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not send");
+      setDraft(body);
+    }
   };
 
-  const filtered = convos.filter((c) => members[c.with].name.toLowerCase().includes(q.toLowerCase()));
+  const openPicker = async () => {
+    setPickerOpen(true);
+    try {
+      setClassmates(await listClassmates());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not load classmates");
+    }
+  };
+
+  const startWith = async (c: Classmate) => {
+    try {
+      const id = await startConversation(c.id);
+      setPickerOpen(false);
+      await refresh();
+      setActiveId(id);
+      setMobileChat(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not start chat");
+    }
+  };
+
+  const filtered = convos.filter((c) =>
+    classmateToMember(c.other).name.toLowerCase().includes(q.toLowerCase()),
+  );
 
   return (
     <div className="flex h-[calc(100dvh-56px-64px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-56px)]">
       <div className={cn("flex w-full shrink-0 flex-col border-r bg-white md:max-w-[340px]", mobileChat && "max-md:hidden")}>
         <div className="flex items-center justify-between px-4 pb-3 pt-5">
           <h1 className="text-[18px] font-semibold tracking-tight">Messages</h1>
-          <Button variant="ghost" size="icon-sm" aria-label="New message" onClick={() => toast("Start a new conversation")}>
+          <Button variant="ghost" size="icon-sm" aria-label="New message" onClick={() => void openPicker()}>
             <PenSquare className="size-4" />
           </Button>
         </div>
@@ -50,8 +137,18 @@ export default function MessagesPage() {
           </div>
         </div>
         <ul className="flex-1 overflow-y-auto px-2">
+          {loading && <li className="px-3 py-8 text-center text-[13px] text-muted-foreground">Loading…</li>}
+          {!loading && filtered.length === 0 && (
+            <li className="px-3 py-10 text-center">
+              <div className="text-[13.5px] font-medium">No conversations yet</div>
+              <p className="mt-1 text-[12.5px] text-muted-foreground">Message a classmate about housing, visas, or meetup plans.</p>
+              <Button className="mt-4 rounded-full" size="sm" onClick={() => void openPicker()}>
+                <UserPlus className="size-4" /> New message
+              </Button>
+            </li>
+          )}
           {filtered.map((c) => {
-            const m = members[c.with];
+            const m = classmateToMember(c.other);
             const on = c.id === activeId;
             return (
               <li key={c.id}>
@@ -63,19 +160,13 @@ export default function MessagesPage() {
                   }}
                   className={cn("flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition-colors", on ? "bg-muted" : "hover:bg-[#fafafa]")}
                 >
-                  <div className="relative">
-                    <UserAvatar member={m} size={40} />
-                    {["arjun", "sofia"].includes(m.id) && <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-success ring-2 ring-white" />}
-                  </div>
+                  <UserAvatar member={m} size={40} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className={cn("truncate text-[13.5px]", c.unread ? "font-semibold" : "font-medium")}>{m.name}</span>
                       <span className="shrink-0 text-[11px] text-subtle">{c.time}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("truncate text-[12.5px]", c.unread ? "font-medium text-foreground" : "text-muted-foreground")}>{c.last}</span>
-                      {c.unread > 0 && <span className="tabular ml-auto flex size-4.5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">{c.unread}</span>}
-                    </div>
+                    <span className={cn("truncate text-[12.5px]", c.unread ? "font-medium text-foreground" : "text-muted-foreground")}>{c.last}</span>
                   </div>
                 </button>
               </li>
@@ -85,126 +176,126 @@ export default function MessagesPage() {
       </div>
 
       <div className={cn("flex min-w-0 flex-1 flex-col bg-white", !mobileChat && "max-md:hidden")}>
-        <div className="flex h-16 shrink-0 items-center gap-2 border-b px-3 sm:gap-3 sm:px-5">
-          <Button variant="ghost" size="icon-sm" className="md:hidden" onClick={() => setMobileChat(false)} aria-label="Back to conversations">
-            <ArrowLeft className="size-4" />
-          </Button>
-          <UserAvatar member={other} size={36} />
-          <div className="min-w-0 flex-1">
-            <div className="text-[14px] font-semibold">{other.name}</div>
-            <div className="text-[12px] text-muted-foreground">
-              {other.program} · {other.from}
+        {!active || !other ? (
+          <div className="grid flex-1 place-items-center px-6 text-center">
+            <div>
+              <div className="text-[15px] font-semibold">Your inbox</div>
+              <p className="mt-1 max-w-sm text-[13px] text-muted-foreground">Pick a conversation or start a new one with someone in your class.</p>
+              <Button className="mt-4 rounded-full" onClick={() => void openPicker()}>
+                <PenSquare className="size-4" /> New message
+              </Button>
             </div>
           </div>
-          <Button variant="ghost" size="icon-sm" className="max-sm:hidden" aria-label="Call" onClick={() => toast("Voice calls are coming soon", { description: "For now, share a call link in the chat." })}>
-            <Phone className="size-4" />
-          </Button>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon-sm" className="max-sm:hidden" aria-label="Info">
-                <Info className="size-4" />
+        ) : (
+          <>
+            <div className="flex h-16 shrink-0 items-center gap-2 border-b px-3 sm:gap-3 sm:px-5">
+              <Button variant="ghost" size="icon-sm" className="md:hidden" onClick={() => setMobileChat(false)} aria-label="Back to conversations">
+                <ArrowLeft className="size-4" />
               </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-[280px] p-0">
-              <div className="flex flex-col items-center border-b px-5 py-5 text-center">
-                <UserAvatar member={other} size={56} />
-                <div className="mt-3 text-[14.5px] font-semibold">{other.name}</div>
-                <div className="text-[12.5px] text-muted-foreground">@{other.handle}</div>
+              <UserAvatar member={other} size={36} />
+              <div className="min-w-0 flex-1">
+                <div className="text-[14px] font-semibold">{other.name}</div>
+                <div className="text-[12px] text-muted-foreground">
+                  {other.program}
+                  {other.from ? ` · ${other.from}` : ""}
+                </div>
               </div>
-              <dl className="space-y-2.5 px-5 py-4 text-[12.5px]">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">Program</dt>
-                  <dd className="font-medium">{other.program}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">From</dt>
-                  <dd className="font-medium">{other.from}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">School</dt>
-                  <dd className="font-medium">UCLA Anderson</dd>
-                </div>
-              </dl>
-              <div className="border-t px-5 py-3 text-[11.5px] text-muted-foreground">Verified admitted student</div>
-            </PopoverContent>
-          </Popover>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="More">
-                <Ellipsis className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => toast("Conversation muted")}>
-                <BellOff /> Mute
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => toast(`Blocked ${other.name}`)}>
-                <Ban /> Block
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => toast("Report sent")}>
-                <Flag /> Report
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={() => toast("Conversation deleted")}>
-                <Trash2 /> Delete conversation
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-5 py-6">
-          <div className="mx-auto max-w-[680px] space-y-1">
-            <div className="mb-6 flex flex-col items-center text-center">
-              <UserAvatar member={other} size={56} />
-              <div className="mt-2 text-[14px] font-semibold">{other.name}</div>
-              <div className="text-[12px] text-muted-foreground">{other.program} · {other.from}</div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" aria-label="More">
+                    <Ellipsis className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => toast("Mute coming soon")}>Mute</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toast("Report sent to AfterAdmit")}>Report</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            {active.messages.map((msg, i) => {
-              const mine = msg.from === "priya";
-              const prev = active.messages[i - 1];
-              const grouped = prev && prev.from === msg.from;
-              return (
-                <div key={i} className={cn("flex", mine ? "justify-end" : "justify-start", !grouped && "pt-3")}>
-                  <div className="max-w-[72%]">
-                    {!grouped && <div className={cn("mb-1 text-[11px] text-subtle", mine && "text-right")}>{msg.time}</div>}
+
+            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
+              {active.messages.length === 0 && (
+                <div className="rounded-xl border border-dashed px-4 py-8 text-center text-[13px] text-muted-foreground">
+                  Say hi — share housing tips, ask about visas, or plan a meetup.
+                </div>
+              )}
+              {active.messages.map((msg) => {
+                const mine = msg.sender_id === me;
+                return (
+                  <div key={msg.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
                     <div
                       className={cn(
-                        "rounded-2xl px-3.5 py-2 text-[13.5px] leading-relaxed",
-                        mine ? "rounded-br-md bg-ink text-white" : "rounded-bl-md bg-muted text-foreground",
+                        "max-w-[80%] rounded-2xl px-3.5 py-2 text-[13.5px] leading-relaxed",
+                        mine ? "bg-ink text-white" : "bg-muted text-foreground",
                       )}
                     >
                       {msg.body}
                     </div>
                   </div>
-                </div>
+                );
+              })}
+              <div ref={endRef} />
+            </div>
+
+            <div className="shrink-0 border-t p-3 sm:p-4">
+              <form
+                className="flex items-end gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void send();
+                }}
+              >
+                <Input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder={`Message ${other.name.split(" ")[0]}…`}
+                  className="min-h-10 flex-1"
+                />
+                <Button type="submit" size="icon" disabled={!draft.trim()} aria-label="Send">
+                  <Send className="size-4" />
+                </Button>
+              </form>
+            </div>
+          </>
+        )}
+      </div>
+
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>New message</DialogTitle>
+            <DialogDescription>Start a chat with someone in your admitted class.</DialogDescription>
+          </DialogHeader>
+          <ul className="max-h-[360px] space-y-1 overflow-y-auto">
+            {classmates.length === 0 && (
+              <li className="py-8 text-center text-[13px] text-muted-foreground">
+                No other classmates have joined yet. Invite a friend with your school&apos;s invite link.
+              </li>
+            )}
+            {classmates.map((c) => {
+              const m = classmateToMember(c);
+              return (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => void startWith(c)}
+                    className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left hover:bg-muted"
+                  >
+                    <UserAvatar member={m} size={36} />
+                    <div className="min-w-0">
+                      <div className="truncate text-[13.5px] font-medium">{m.name}</div>
+                      <div className="truncate text-[12px] text-muted-foreground">
+                        {m.program}
+                        {m.from ? ` · ${m.from}` : ""}
+                      </div>
+                    </div>
+                  </button>
+                </li>
               );
             })}
-            <div ref={endRef} />
-          </div>
-        </div>
-
-        <div className="border-t p-4">
-          <div className="mx-auto flex max-w-[680px] items-center gap-2 rounded-2xl border bg-white px-2 py-1.5 focus-within:border-[#d4d4d8] focus-within:shadow-sm">
-            <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label="Attach">
-              <Paperclip className="size-4" />
-            </Button>
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder={`Message ${other.name.split(" ")[0]}`}
-              className="h-8 flex-1 bg-transparent text-[13.5px] outline-none placeholder:text-subtle"
-            />
-            <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label="Emoji">
-              <Smile className="size-4" />
-            </Button>
-            <Button size="icon-sm" className="rounded-xl" onClick={send} disabled={!draft.trim()} aria-label="Send">
-              <Send className="size-4" />
-            </Button>
-          </div>
-          <p className="mx-auto mt-2 max-w-[680px] text-center text-[11px] text-subtle">Never share passport, visa, or financial document numbers in chat.</p>
-        </div>
-      </div>
+          </ul>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SpaceIcon } from "@/components/community/space-icon";
 import { communities, type Community } from "@/lib/community-data";
+import { createClient } from "@/lib/supabase/client";
 
 function SpaceCard({ c, joined, onToggle }: { c: Community; joined: boolean; onToggle: () => void }) {
   return (
@@ -75,8 +76,29 @@ function SpaceCard({ c, joined, onToggle }: { c: Community; joined: boolean; onT
 }
 
 export default function SpacesDirectory() {
-  const [joined, setJoined] = React.useState<Record<string, boolean>>(() => Object.fromEntries(communities.map((c) => [c.id, c.joined])));
+  const [joined, setJoined] = React.useState<Record<string, boolean>>(() =>
+    Object.fromEntries(communities.map((c) => [c.id, c.joined])),
+  );
   const [q, setQ] = React.useState("");
+
+  React.useEffect(() => {
+    void (async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("community_members").select("space_id").eq("user_id", user.id);
+      if (data?.length) {
+        setJoined((j) => {
+          const next = { ...j };
+          for (const id of Object.keys(next)) next[id] = false;
+          for (const row of data) next[row.space_id] = true;
+          return next;
+        });
+      }
+    })();
+  }, []);
 
   const query = q.trim().toLowerCase();
   const match = (c: Community) => !query || `${c.name} ${c.title} ${c.description}`.toLowerCase().includes(query);
@@ -86,7 +108,30 @@ export default function SpacesDirectory() {
   const toggle = (c: Community) => {
     const next = !joined[c.id];
     setJoined((j) => ({ ...j, [c.id]: next }));
-    toast(next ? `Joined ${c.name}` : `Left ${c.name}`, next ? { description: "It now appears in your sidebar." } : undefined);
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) throw new Error("Sign in to join spaces");
+        if (next) {
+          const { error } = await supabase.from("community_members").upsert({ user_id: user.id, space_id: c.id });
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("community_members")
+            .delete()
+            .eq("user_id", user.id)
+            .eq("space_id", c.id);
+          if (error) throw error;
+        }
+        toast(next ? `Joined ${c.name}` : `Left ${c.name}`, next ? { description: "It now appears in your sidebar." } : undefined);
+      } catch (e) {
+        setJoined((j) => ({ ...j, [c.id]: !next }));
+        toast.error(e instanceof Error ? e.message : "Could not update membership");
+      }
+    })();
   };
 
   return (
