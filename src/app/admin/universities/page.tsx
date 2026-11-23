@@ -20,7 +20,7 @@ import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { FormSheet, type FormSheetConfig } from "@/components/shell/form-sheet";
 import { type University } from "@/lib/ops-data";
 import { providers } from "@/lib/data";
-import { loadAdminSchools, type AdminSchool } from "@/lib/admin-live";
+import { loadAdminSchools, upsertSchool, type AdminSchool } from "@/lib/admin-live";
 
 function schoolColor(name: string) {
   let h = 0;
@@ -55,12 +55,29 @@ const steps = [
   { k: "admins", l: "Admins", i: UserPlus },
 ];
 
-function NewUniversitySheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+function NewUniversitySheet({
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onCreated: () => void;
+}) {
   const [step, setStep] = React.useState(0);
   const [color, setColor] = React.useState("#2774AE");
   const [admins, setAdmins] = React.useState(["admissions@lakeside.edu", ""]);
+  const [universityName, setUniversityName] = React.useState("");
+  const [domain, setDomain] = React.useState("");
+  const [intlContact, setIntlContact] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
   const handleOpenChange = (o: boolean) => {
-    if (!o) setStep(0);
+    if (!o) {
+      setStep(0);
+      setUniversityName("");
+      setDomain("");
+      setIntlContact("");
+    }
     onOpenChange(o);
   };
 
@@ -90,12 +107,12 @@ function NewUniversitySheet({ open, onOpenChange }: { open: boolean; onOpenChang
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label>University name</Label>
-                <Input placeholder="e.g. Lakeside Institute of Technology" />
+                <Input placeholder="e.g. Lakeside Institute of Technology" value={universityName} onChange={(e) => setUniversityName(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Email domain</Label>
-                  <Input placeholder="lakeside.edu" />
+                  <Input placeholder="lakeside.edu" value={domain} onChange={(e) => setDomain(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Brand colour</Label>
@@ -113,7 +130,7 @@ function NewUniversitySheet({ open, onOpenChange }: { open: boolean; onOpenChang
               </div>
               <div className="space-y-1.5">
                 <Label>International office contact</Label>
-                <Input placeholder="intl.office@lakeside.edu" />
+                <Input placeholder="intl.office@lakeside.edu" value={intlContact} onChange={(e) => setIntlContact(e.target.value)} type="email" />
               </div>
             </div>
           )}
@@ -202,9 +219,27 @@ function NewUniversitySheet({ open, onOpenChange }: { open: boolean; onOpenChang
             </Button>
           ) : (
             <Button
+              disabled={!universityName.trim() || saving}
               onClick={() => {
-                handleOpenChange(false);
-                toast.success("University created", { description: "Admin invites sent." });
+                void (async () => {
+                  setSaving(true);
+                  try {
+                    const short = universityName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || domain.split(".")[0]?.slice(0, 4).toUpperCase() || "SCH";
+                    await upsertSchool({
+                      name: domain.trim() || universityName.trim().toLowerCase().replace(/\s+/g, "-"),
+                      full_name: universityName.trim(),
+                      short_name: short,
+                      support_email: intlContact.trim() || (domain ? `intl.office@${domain.trim()}` : null),
+                    });
+                    handleOpenChange(false);
+                    onCreated();
+                    toast.success("University created", { description: "School record saved." });
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Could not create university");
+                  } finally {
+                    setSaving(false);
+                  }
+                })();
               }}
             >
               Create university
@@ -225,9 +260,13 @@ function UniversitiesInner() {
   const [q, setQ] = React.useState("");
   const [universities, setUniversities] = React.useState<(University & { inviteTotal: number })[]>([]);
 
-  React.useEffect(() => {
+  const reloadSchools = React.useCallback(() => {
     void loadAdminSchools().then((rows) => setUniversities(rows.map(mapAdminSchool)));
   }, []);
+
+  React.useEffect(() => {
+    reloadSchools();
+  }, [reloadSchools]);
 
   const list = universities.filter((u) => !archived.includes(u.id) && u.name.toLowerCase().includes(q.toLowerCase()));
 
@@ -379,7 +418,7 @@ function UniversitiesInner() {
           </TableBody>
         </Table>
       </div>
-      <NewUniversitySheet open={open} onOpenChange={setOpen} />
+      <NewUniversitySheet open={open} onOpenChange={setOpen} onCreated={reloadSchools} />
       <FormSheet config={form} onClose={() => setForm(null)} />
     </PageContainer>
   );

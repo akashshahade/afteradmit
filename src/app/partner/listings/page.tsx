@@ -27,8 +27,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
-import { listings as seed, type Listing } from "@/lib/ops-data";
-import { createClient } from "@/lib/supabase/client";
+import { type Listing } from "@/lib/ops-data";
+import {
+  listPartnerListings,
+  upsertPartnerListing,
+  setPartnerListingActive,
+  deletePartnerListing,
+  type PartnerListing,
+} from "@/lib/partner-live";
 
 function formatUpdated(iso: string) {
   const d = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -37,21 +43,33 @@ function formatUpdated(iso: string) {
   return `${d}d ago`;
 }
 
-function providerToListing(row: Record<string, unknown>): Listing {
-  const name = String(row.name ?? "Listing");
-  const active = !!row.active;
+type ListingTab = "all" | "live" | "review" | "paused";
+
+const TAB_STATUS: Record<Exclude<ListingTab, "all">, Listing["status"]> = {
+  live: "Live",
+  review: "In review",
+  paused: "Paused",
+};
+
+function matchesTab(status: Listing["status"], tab: ListingTab) {
+  if (tab === "all") return true;
+  return status === TAB_STATUS[tab];
+}
+
+function partnerListingToListing(row: PartnerListing | Record<string, unknown>): Listing {
+  const r = row as PartnerListing;
   return {
-    id: String(row.id),
-    title: name,
-    type: String(row.category ?? "Service"),
-    price: row.perk ? String(row.perk) : "—",
-    status: active ? "Live" : "Paused",
+    id: String(r.id),
+    title: String(r.name ?? "Listing"),
+    type: String(r.category ?? "Service"),
+    price: r.perk ?? "—",
+    status: r.active ? "Live" : "Paused",
     placements: [],
     schools: ["All schools"],
-    clicks: Number(row.leads) || 0,
+    clicks: Number(r.leads ?? 0),
     ctr: 0,
-    perk: row.perk ? String(row.perk) : undefined,
-    updated: row.updated_at ? formatUpdated(String(row.updated_at)) : "—",
+    perk: r.perk ?? undefined,
+    updated: r.updated_at ? formatUpdated(String(r.updated_at)) : "—",
   };
 }
 
@@ -209,34 +227,33 @@ function ListingSheet({ open, onOpenChange, listing, onSave }: { open: boolean; 
 
 function ListingsInner() {
   const params = useSearchParams();
-  const [items, setItems] = React.useState(seed);
-  const [tab, setTab] = React.useState("all");
+  const [items, setItems] = React.useState<Listing[]>([]);
+  const [tab, setTab] = React.useState<ListingTab>("all");
   const [sheet, setSheet] = React.useState(params.get("new") === "1");
   const [editing, setEditing] = React.useState<Listing | null>(null);
   const [deleting, setDeleting] = React.useState<Listing | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    void (async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { data: profile } = user
-        ? await supabase.from("profiles").select("partner_org_id").eq("id", user.id).maybeSingle()
-        : { data: null };
-
-      let query = supabase.from("marketplace_providers").select("*").order("name");
-      if (profile?.partner_org_id) query = query.eq("id", profile.partner_org_id);
-      else query = query.eq("active", true);
-
-      const { data, error } = await query;
-      if (!error && data?.length) setItems(data.map((row) => providerToListing(row as Record<string, unknown>)));
-    })();
+  const refresh = React.useCallback(async () => {
+    try {
+      const rows = await listPartnerListings();
+      setItems(rows.map(partnerListingToListing));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not load listings");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const list = items.filter((l) => tab === "all" || l.status === tab);
+  React.useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const list = items.filter((l) => matchesTab(l.status, tab));
 
   const update = (id: string, patch: Partial<Listing>) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+
+  const countForTab = (t: ListingTab) => (t === "all" ? items.length : items.filter((x) => matchesTab(x.status, t)).length);
 
   return (
     <PageContainer>
@@ -257,18 +274,33 @@ function ListingsInner() {
         }
       />
 
-      <Tabs value={tab} onValueChange={setTab} className="mt-6">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as ListingTab)} className="mt-6">
         <TabsList>
-          {["all", "Live", "In review", "Paused"].map((t) => (
-            <TabsTrigger key={t} value={t} className="capitalize">
-              {t}
-              <span className="tabular ml-1 text-subtle">{t === "all" ? items.length : items.filter((x) => x.status === t).length}</span>
+          {(
+            [
+              ["all", "All"],
+              ["live", "Live"],
+              ["review", "In review"],
+              ["paused", "Paused"],
+            ] as const
+          ).map(([value, label]) => (
+            <TabsTrigger key={value} value={value}>
+              {label}
+              <span className="tabular ml-1 text-subtle">{countForTab(value)}</span>
             </TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
+        {loading && (
+          <div className="col-span-full py-12 text-center text-[13px] text-muted-foreground">Loading listings…</div>
+        )}
+        {!loading && list.length === 0 && (
+          <div className="col-span-full rounded-2xl border border-dashed py-16 text-center text-[13px] text-muted-foreground">
+            No listings in this view yet.
+          </div>
+        )}
         {list.map((l) => (
           <div key={l.id} className="group flex flex-col overflow-hidden rounded-2xl border bg-white transition-shadow hover:shadow-md">
             <div className="relative h-36 bg-gradient-to-br from-[#f4f4f5] via-[#ececee] to-[#e4e4e7]">
@@ -307,8 +339,15 @@ function ListingsInner() {
                     {l.status === "Live" ? (
                       <DropdownMenuItem
                         onSelect={() => {
-                          update(l.id, { status: "Paused" });
-                          toast("Listing paused");
+                          void (async () => {
+                            try {
+                              await setPartnerListingActive(l.id, false);
+                              update(l.id, { status: "Paused" });
+                              toast("Listing paused");
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Could not pause listing");
+                            }
+                          })();
                         }}
                       >
                         <Pause /> Pause
@@ -316,8 +355,15 @@ function ListingsInner() {
                     ) : l.status === "Paused" ? (
                       <DropdownMenuItem
                         onSelect={() => {
-                          update(l.id, { status: "Live" });
-                          toast.success("Listing resumed");
+                          void (async () => {
+                            try {
+                              await setPartnerListingActive(l.id, true);
+                              update(l.id, { status: "Live" });
+                              toast.success("Listing resumed");
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Could not resume listing");
+                            }
+                          })();
                         }}
                       >
                         <Play /> Resume
@@ -391,15 +437,24 @@ function ListingsInner() {
         onOpenChange={setSheet}
         listing={editing}
         onSave={({ title }) => {
-          if (editing) {
-            update(editing.id, { title: title!, status: "In review", updated: "Just now" });
-          } else {
-            setItems((xs) => [
-              { id: `ls${Date.now()}`, title: title!, type: "Shared suite", price: "$1,500 / mo", status: "In review", placements: ["Lease signed"], schools: ["UCLA Anderson"], clicks: 0, ctr: 0, updated: "Just now" },
-              ...xs,
-            ]);
-          }
-          toast.success("Submitted for review", { description: "AfterAdmit will review within 1 business day." });
+          void (async () => {
+            try {
+              const saved = await upsertPartnerListing({
+                id: editing?.id,
+                name: title,
+                category: editing?.type ?? "Housing",
+              });
+              const mapped = partnerListingToListing(saved);
+              if (editing) {
+                update(editing.id, { ...mapped, status: "In review" });
+              } else {
+                setItems((xs) => [{ ...mapped, status: "In review" as const }, ...xs]);
+              }
+              toast.success("Submitted for review", { description: "AfterAdmit will review within 1 business day." });
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Could not save listing");
+            }
+          })();
         }}
       />
 
@@ -414,8 +469,17 @@ function ListingsInner() {
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
-                setItems((xs) => xs.filter((x) => x.id !== deleting?.id));
-                toast("Listing deleted");
+                if (!deleting) return;
+                void (async () => {
+                  try {
+                    await deletePartnerListing(deleting.id);
+                    setItems((xs) => xs.filter((x) => x.id !== deleting.id));
+                    toast("Listing deleted");
+                    setDeleting(null);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Could not delete listing");
+                  }
+                })();
               }}
             >
               Delete listing

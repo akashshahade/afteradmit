@@ -15,8 +15,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { FormSheet, type FormSheetConfig, type FormField } from "@/components/shell/form-sheet";
-import { milestones, providers as seedProviders, type Provider } from "@/lib/data";
-import { loadProvidersAdmin } from "@/lib/admin-live";
+import { milestones, type Provider } from "@/lib/data";
+import { loadProvidersAdmin, setProviderActive } from "@/lib/admin-live";
 
 function mapProviderRow(row: Record<string, unknown>): Provider {
   const name = String(row.name ?? "");
@@ -55,12 +55,12 @@ export default function ProvidersPage() {
   const [q, setQ] = React.useState("");
   const [tab, setTab] = React.useState("all");
   const [review, setReview] = React.useState(true);
-  const [providers, setProviders] = React.useState<Provider[]>(seedProviders);
+  const [providers, setProviders] = React.useState<Provider[]>([]);
 
   React.useEffect(() => {
-    void loadProvidersAdmin().then((rows) => {
-      if (rows.length) setProviders(rows.map((row) => mapProviderRow(row as Record<string, unknown>)));
-    });
+    void loadProvidersAdmin()
+      .then((rows) => setProviders(rows.map((row) => mapProviderRow(row as Record<string, unknown>))))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Could not load providers"));
   }, []);
 
   const list = providers.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()) && (tab === "all" || p.category === tab));
@@ -151,6 +151,13 @@ export default function ProvidersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {list.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={8} className="py-10 text-center text-[13px] text-muted-foreground">
+                  No providers yet.
+                </TableCell>
+              </TableRow>
+            )}
             {list.map((p) => {
               const placements = milestones.filter((m) => m.providers?.includes(p.id)).length;
               return (
@@ -185,7 +192,20 @@ export default function ProvidersPage() {
                   </TableCell>
                   <TableCell className="font-mono text-[11.5px] text-muted-foreground">ref=aa_{p.id}</TableCell>
                   <TableCell>
-                    <Switch defaultChecked={p.active} onCheckedChange={(v) => toast(v ? `${p.name} activated` : `${p.name} deactivated`)} />
+                    <Switch
+                      checked={p.active}
+                      onCheckedChange={(v) => {
+                        void (async () => {
+                          try {
+                            await setProviderActive(p.id, v);
+                            setProviders((xs) => xs.map((x) => (x.id === p.id ? { ...x, active: v } : x)));
+                            toast.success(v ? `${p.name} activated` : `${p.name} deactivated`);
+                          } catch (e) {
+                            toast.error(e instanceof Error ? e.message : "Could not update provider");
+                          }
+                        })();
+                      }}
+                    />
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

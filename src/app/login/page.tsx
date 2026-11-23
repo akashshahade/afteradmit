@@ -202,6 +202,17 @@ function LoginForm() {
               Sign in here
             </Link>
           </p>
+          <p className="mt-2 text-center text-[12.5px] text-muted-foreground">
+            Partner?{" "}
+            <Link href="/partner/login" className="font-medium text-foreground hover:text-primary">
+              Partner portal
+            </Link>
+            {" · "}
+            Ops?{" "}
+            <Link href="/admin/login" className="font-medium text-foreground hover:text-primary">
+              Admin
+            </Link>
+          </p>
         </div>
 
         <div className="flex items-center justify-between text-[12px] text-subtle">

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
-import { createClient } from "@/lib/supabase/client";
+import { listPartnerLeads } from "@/lib/partner-live";
 import { loadProviders } from "@/lib/marketplace-live";
 
 type PartnerLeadRow = {
@@ -49,12 +49,13 @@ export default function PartnerLeads() {
 
   React.useEffect(() => {
     void (async () => {
-      const supabase = createClient();
-      const providers = await loadProviders();
-      const listingNames = Object.fromEntries(providers.map((p) => [p.id, p.name]));
-      const { data, error } = await supabase.rpc("list_partner_leads");
-      if (!error && data?.length) {
+      try {
+        const providers = await loadProviders();
+        const listingNames = Object.fromEntries(providers.map((p) => [p.id, p.name]));
+        const data = await listPartnerLeads();
         setRows((data as Record<string, unknown>[]).map((row) => mapPartnerLead(row, listingNames)));
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not load leads");
       }
     })();
   }, []);

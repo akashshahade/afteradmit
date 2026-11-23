@@ -1,9 +1,13 @@
-import type { Metadata } from "next";
+"use client";
+
+import { usePathname } from "next/navigation";
 
 import { AdminShell } from "@/components/admin/admin-shell";
 
-export const metadata: Metadata = { robots: { index: false, follow: false } };
-
-export default function AdminLayout({ children }: LayoutProps<"/admin">) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  if (pathname === "/admin/login") {
+    return children;
+  }
   return <AdminShell>{children}</AdminShell>;
 }

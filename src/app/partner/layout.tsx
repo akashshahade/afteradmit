@@ -1,9 +1,13 @@
-import type { Metadata } from "next";
+"use client";
+
+import { usePathname } from "next/navigation";
 
 import { PartnerShell } from "@/components/partner/partner-shell";
 
-export const metadata: Metadata = { robots: { index: false, follow: false } };
-
-export default function PartnerLayout({ children }: LayoutProps<"/partner">) {
+export default function PartnerLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  if (pathname === "/partner/login") {
+    return children;
+  }
   return <PartnerShell>{children}</PartnerShell>;
 }

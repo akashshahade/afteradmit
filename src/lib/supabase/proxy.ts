@@ -25,10 +25,12 @@ export async function updateSession(request: NextRequest) {
   const isStudentRoute = path === "/student" || path.startsWith("/student/");
   const isOnboarding = path === "/onboarding" || path.startsWith("/onboarding/");
   const isUniversityLogin = path === "/university/login";
+  const isAdminLogin = path === "/admin/login";
+  const isPartnerLogin = path === "/partner/login";
   const isUniversityRoute =
     !isUniversityLogin && (path === "/university" || path.startsWith("/university/"));
-  const isAdminRoute = path === "/admin" || path.startsWith("/admin/");
-  const isPartnerRoute = path === "/partner" || path.startsWith("/partner/");
+  const isAdminRoute = !isAdminLogin && (path === "/admin" || path.startsWith("/admin/"));
+  const isPartnerRoute = !isPartnerLogin && (path === "/partner" || path.startsWith("/partner/"));
   const isProtected =
     isStudentRoute || isOnboarding || isUniversityRoute || isAdminRoute || isPartnerRoute;
 
@@ -36,7 +38,13 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = pathname;
     url.search = "";
-    if (setNext && (pathname === "/login" || pathname === "/university/login")) {
+    if (
+      setNext &&
+      (pathname === "/login" ||
+        pathname === "/university/login" ||
+        pathname === "/admin/login" ||
+        pathname === "/partner/login")
+    ) {
       url.searchParams.set("next", path);
     }
     const redirect = NextResponse.redirect(url);
@@ -84,8 +92,16 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  if ((isStudentRoute || isOnboarding || isAdminRoute || isPartnerRoute) && !user) {
+  if ((isStudentRoute || isOnboarding) && !user) {
     return redirectWithCookies("/login", true);
+  }
+
+  if (isAdminRoute && !user) {
+    return redirectWithCookies("/admin/login", true);
+  }
+
+  if (isPartnerRoute && !user) {
+    return redirectWithCookies("/partner/login", true);
   }
 
   if (isUniversityRoute && !user) {

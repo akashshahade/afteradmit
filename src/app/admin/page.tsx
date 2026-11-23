@@ -16,8 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { ChartTooltip, KpiCard } from "@/components/charts/chart-bits";
 import { ActivityRings } from "@/components/charts/activity-rings";
-import { feedback, kpis, leadsByCategory, leadsTrend, stageCompletion, universities as fallbackUniversities, type University } from "@/lib/ops-data";
-import { loadAdminSchools, loadAdminStats, type AdminSchool, type AdminStats } from "@/lib/admin-live";
+import { feedback, kpis, stageCompletion, type University } from "@/lib/ops-data";
+import { loadAdminSchools, loadAdminStats, loadAdminLeadsAnalytics, type AdminSchool, type AdminStats, type AdminLeadsAnalytics } from "@/lib/admin-live";
 
 function schoolColor(name: string) {
   let h = 0;
@@ -45,22 +45,31 @@ function adminSchoolToUniversity(s: AdminSchool): University {
   };
 }
 
+const categoryFills = ["#FF4500", "#18181B", "#6366F1", "#14B8A6", "#F59E0B", "#EC4899"];
+
 export default function AdminOverview() {
   const [stats, setStats] = React.useState<AdminStats | null>(null);
   const [schoolRows, setSchoolRows] = React.useState<AdminSchool[]>([]);
+  const [leadsAnalytics, setLeadsAnalytics] = React.useState<AdminLeadsAnalytics | null>(null);
 
   React.useEffect(() => {
     void loadAdminStats().then(setStats);
     void loadAdminSchools().then(setSchoolRows);
+    void loadAdminLeadsAnalytics().then(setLeadsAnalytics);
   }, []);
 
-  const invitedStudents = stats?.invites ?? kpis.students;
-  const activationPct = stats?.invites ? Math.round((stats.joined / stats.invites) * 100) : kpis.activation;
-  const providerLeads = stats?.clicks ?? kpis.leads;
-  const milestonesDone = stats?.posts ?? kpis.milestonesDone;
+  const invitedStudents = stats?.invites ?? 0;
+  const activationPct = stats?.invites ? Math.round((stats.joined / stats.invites) * 100) : 0;
+  const providerLeads = stats?.clicks ?? 0;
+  const milestonesDone = stats?.posts ?? 0;
 
-  const universities = schoolRows.length ? schoolRows.map(adminSchoolToUniversity) : fallbackUniversities;
-  const totalLeads = stats?.clicks ?? leadsByCategory.reduce((n, c) => n + c.leads, 0);
+  const universities = schoolRows.map(adminSchoolToUniversity);
+  const leadsTrend = leadsAnalytics?.trend ?? [];
+  const leadsByCategory = (leadsAnalytics?.by_category ?? []).map((c, i) => ({
+    ...c,
+    fill: categoryFills[i % categoryFills.length],
+  }));
+  const totalLeads = leadsByCategory.reduce((n, c) => n + c.leads, 0) || providerLeads;
   const live = universities.filter((u) => u.status === "Live");
 
   return (
@@ -107,10 +116,10 @@ export default function AdminOverview() {
       />
 
       <div data-tour="kpis" className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Invited students" value={formatNumber(invitedStudents)} delta={stats ? undefined : kpis.studentsDelta} hint={stats ? "live" : "vs last period"} icon={GraduationCap} spark={[12, 18, 22, 30, 41, 48, 55, 63]} />
-        <KpiCard label="Activation rate" value={`${activationPct}%`} delta={stats ? undefined : kpis.activationDelta} hint="signed up" icon={UserCheck} spark={[52, 55, 58, 61, 64, 66, 69, 71]} />
-        <KpiCard label="Provider leads" value={formatNumber(providerLeads)} delta={stats ? undefined : kpis.leadsDelta} hint="clicks" icon={MousePointerClick} spark={[31, 44, 58, 72, 69, 88, 104, 121, 139, 168]} />
-        <KpiCard label="Milestones completed" value={formatNumber(milestonesDone)} delta={stats ? undefined : kpis.milestonesDelta} hint="all schools" icon={CheckCheck} spark={[3, 5, 6, 9, 12, 14, 18, 22]} />
+        <KpiCard label="Invited students" value={formatNumber(invitedStudents)} hint="live" icon={GraduationCap} spark={leadsTrend.map((d) => d.signups)} />
+        <KpiCard label="Activation rate" value={`${activationPct}%`} hint="signed up" icon={UserCheck} />
+        <KpiCard label="Provider leads" value={formatNumber(providerLeads)} hint="clicks" icon={MousePointerClick} spark={leadsTrend.map((d) => d.leads)} />
+        <KpiCard label="Milestones completed" value={formatNumber(milestonesDone)} hint="all schools" icon={CheckCheck} />
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -132,7 +141,7 @@ export default function AdminOverview() {
           <CardContent className="pl-1 pr-5 pt-4">
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={leadsTrend} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+                <AreaChart data={leadsTrend.length ? leadsTrend : [{ d: "—", leads: 0, signups: 0 }]} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#FF4500" stopOpacity={0.2} />
@@ -160,8 +169,17 @@ export default function AdminOverview() {
             <div className="relative mx-auto h-[180px] w-[180px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={leadsByCategory} dataKey="leads" nameKey="category" innerRadius={62} outerRadius={86} paddingAngle={2} cornerRadius={4} stroke="none">
-                    {leadsByCategory.map((c) => (
+                  <Pie
+                    data={leadsByCategory.length ? leadsByCategory : [{ category: "—", leads: 0, fill: "#e4e4e7" }]}
+                    dataKey="leads"
+                    nameKey="category"
+                    innerRadius={62}
+                    outerRadius={86}
+                    paddingAngle={2}
+                    cornerRadius={4}
+                    stroke="none"
+                  >
+                    {(leadsByCategory.length ? leadsByCategory : [{ category: "—", leads: 0, fill: "#e4e4e7" }]).map((c) => (
                       <Cell key={c.category} fill={c.fill} />
                     ))}
                   </Pie>
@@ -224,6 +242,9 @@ export default function AdminOverview() {
             </CardAction>
           </CardHeader>
           <CardContent className="space-y-1 px-3 pb-3 pt-3">
+            {live.length === 0 && (
+              <p className="px-3 py-6 text-center text-[13px] text-muted-foreground">No live universities yet.</p>
+            )}
             {live.map((u) => {
               const denom = Math.max(u.students, 1);
               const actPct = Math.round((u.signedUp / denom) * 100);

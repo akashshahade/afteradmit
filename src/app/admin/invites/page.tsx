@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { KpiCard } from "@/components/charts/chart-bits";
-import { universities } from "@/lib/ops-data";
 import { createClient } from "@/lib/supabase/client";
 import { inviteLinkPath, splitName } from "@/lib/invites";
+import { loadAdminSchools, loadAdminInvites, type AdminInvite, type AdminSchool } from "@/lib/admin-live";
 
 type RowStatus = "ready" | "invalid" | "duplicate" | "existing";
 type Row = { name: string; email: string; program: string; intake: string; status: RowStatus };
@@ -22,20 +22,40 @@ type Step = "upload" | "review" | "sending" | "sent";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_ROWS = 5000;
 
-const tracking = [
-  { name: "Sayali Dhale", email: "sayali.dhale@afteradmit.com", sent: "Apr 28", status: "Joined" },
-  { name: "Arjun Mehta", email: "arjun.m@gmail.com", sent: "Apr 28", status: "Joined" },
-  { name: "Sofia Alvarez", email: "sofia.alvarez@gmail.com", sent: "Apr 28", status: "Joined" },
-  { name: "Rohan Iyer", email: "rohan.iyer@outlook.com", sent: "Apr 28", status: "Opened" },
-  { name: "Kenji Watanabe", email: "kenji.w@gmail.com", sent: "Apr 29", status: "Joined" },
-  { name: "Ji-woo Park", email: "jiwoo.park@naver.com", sent: "Apr 29", status: "Sent" },
-  { name: "Amara Okafor", email: "amara.o@gmail.com", sent: "Apr 29", status: "Joined" },
-  { name: "Lucas Bernard", email: "lucas.bernard@orange.fr", sent: "Apr 30", status: "Bounced" },
-  { name: "Maya Chen", email: "maya.chen@gmail.com", sent: "Apr 30", status: "Joined" },
-  { name: "Mateo Rossi", email: "mateo.rossi@gmail.com", sent: "May 2", status: "Sent" },
-] as const;
+type SchoolOption = { id: string; name: string; short: string; students: number; signedUp: number };
 
-const existing = new Set<string>(tracking.map((t) => t.email));
+function mapSchool(s: AdminSchool): SchoolOption {
+  const short = s.short_name ?? s.name;
+  return {
+    id: s.name,
+    name: s.full_name ?? s.name,
+    short,
+    students: s.invited || s.students,
+    signedUp: s.joined,
+  };
+}
+
+function inviteStatusLabel(status: string) {
+  const s = status.toLowerCase();
+  if (s.includes("accept") || s === "joined") return "Joined";
+  if (s.includes("bounce")) return "Bounced";
+  if (s.includes("open")) return "Opened";
+  return "Sent";
+}
+
+function formatSent(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function mapInviteTracking(inv: AdminInvite) {
+  const name = [inv.first_name, inv.last_name].filter(Boolean).join(" ") || inv.email;
+  return {
+    name,
+    email: inv.email,
+    sent: formatSent(inv.created_at),
+    status: inviteStatusLabel(inv.status),
+  };
+}
 
 const sample = [
   ["Ananya Sharma", "ananya.sharma@gmail.com"],
@@ -52,7 +72,7 @@ const sample = [
   ["Hannah Müller", "hannah.mueller@web.de"],
 ].map(([name, email]) => ({ name, email, program: "MBA", intake: "Fall 2027" }));
 
-function validate(rows: Omit<Row, "status">[]): Row[] {
+function validate(rows: Omit<Row, "status">[], existing: Set<string>): Row[] {
   const seen = new Set<string>();
   return rows.slice(0, MAX_ROWS).map((r) => {
     const email = r.email.trim().toLowerCase();
@@ -120,9 +140,11 @@ function Stepper({ step }: { step: Step }) {
 }
 
 export default function InvitesPage() {
-  const live = universities.filter((u) => u.status !== "Draft");
-  const [uniId, setUniId] = React.useState(live[0].id);
-  const uni = live.find((u) => u.id === uniId)!;
+  const [schools, setSchools] = React.useState<SchoolOption[]>([]);
+  const [tracking, setTracking] = React.useState<ReturnType<typeof mapInviteTracking>[]>([]);
+  const [existingEmails, setExistingEmails] = React.useState<Set<string>>(new Set());
+  const [uniId, setUniId] = React.useState("");
+  const uni = schools.find((u) => u.id === uniId) ?? schools[0];
   const [step, setStep] = React.useState<Step>("upload");
   const [rows, setRows] = React.useState<Row[]>([]);
   const [fileName, setFileName] = React.useState("");
@@ -132,12 +154,28 @@ export default function InvitesPage() {
   const [createdInvites, setCreatedInvites] = React.useState<{ email: string; token: string }[]>([]);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
+  React.useEffect(() => {
+    void (async () => {
+      try {
+        const [schoolRows, invites] = await Promise.all([loadAdminSchools(), loadAdminInvites()]);
+        const mapped = schoolRows.map(mapSchool);
+        setSchools(mapped);
+        if (mapped[0]) setUniId((id) => id || mapped[0].id);
+        const track = invites.map(mapInviteTracking);
+        setTracking(track);
+        setExistingEmails(new Set(invites.map((i) => i.email.toLowerCase())));
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not load invites data");
+      }
+    })();
+  }, []);
+
   const ready = rows.filter((r) => r.status === "ready");
   const issues = rows.length - ready.length;
   const count = (s: RowStatus) => rows.filter((r) => r.status === s).length;
 
   const loadRows = (name: string, parsed: Omit<Row, "status">[]) => {
-    const valid = validate(parsed);
+    const valid = validate(parsed, existingEmails);
     if (!valid.length) {
       toast.error("No rows found", { description: "Check the file has a name and email column." });
       return;
@@ -181,8 +219,8 @@ export default function InvitesPage() {
           last_name,
           program: r.program,
           intake: r.intake,
-          school_name: uni.name,
-          school_short: uni.short,
+          school_name: uni?.name ?? "",
+          school_short: uni?.short ?? "",
         };
       });
 
@@ -195,7 +233,7 @@ export default function InvitesPage() {
       setProgress(100);
       setStep("sent");
       toast.success(`${created.length} invite${created.length === 1 ? "" : "s"} created`, {
-        description: `${uni.short} · copy links below (email delivery comes later)`,
+        description: `${uni?.short ?? "School"} · copy links below (email delivery comes later)`,
       });
     } catch (err) {
       setStep("review");
@@ -212,7 +250,7 @@ export default function InvitesPage() {
   };
 
   const shown = tracking.filter((t) => filter === "All" || (filter === "Joined" ? t.status === "Joined" : filter === "Bounced" ? t.status === "Bounced" : t.status === "Sent" || t.status === "Opened"));
-  const notJoined = uni.students - uni.signedUp;
+  const notJoined = Math.max(0, (uni?.students ?? 0) - (uni?.signedUp ?? 0));
 
   return (
     <PageContainer>
@@ -228,12 +266,12 @@ export default function InvitesPage() {
       />
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        <Select value={uniId} onValueChange={(v) => { setUniId(v); reset(); }}>
+        <Select value={uniId} onValueChange={(v) => { setUniId(v); reset(); }} disabled={!schools.length}>
           <SelectTrigger size="sm" className="w-[220px]">
-            <SelectValue />
+            <SelectValue placeholder="Select school" />
           </SelectTrigger>
           <SelectContent>
-            {live.map((u) => (
+            {schools.map((u) => (
               <SelectItem key={u.id} value={u.id}>
                 {u.short}
               </SelectItem>
@@ -255,7 +293,7 @@ export default function InvitesPage() {
         <CardHeader className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>New invites</CardTitle>
-            <CardDescription>{uni.name}</CardDescription>
+            <CardDescription>{uni?.name ?? "Select a university"}</CardDescription>
           </div>
           <Stepper step={step} />
         </CardHeader>
@@ -363,11 +401,11 @@ export default function InvitesPage() {
                   <Mail className="size-4" /> Email preview
                 </div>
                 <div className="mt-3 rounded-xl border bg-white p-4 text-[13px] shadow-xs">
-                  <div className="text-[11.5px] text-muted-foreground">From: {uni.short} via AfterAdmit</div>
-                  <div className="mt-1 font-semibold">You&apos;re invited: your path to {uni.short}</div>
+                  <div className="text-[11.5px] text-muted-foreground">From: {uni?.short ?? "School"} via AfterAdmit</div>
+                  <div className="mt-1 font-semibold">You&apos;re invited: your path to {uni?.short ?? "campus"}</div>
                   <div className="my-3 h-px bg-border" />
                   <p className="leading-relaxed text-muted-foreground">
-                    Hi {ready[0]?.name.split(" ")[0] ?? "there"}, congratulations on your admission! {uni.short} uses AfterAdmit to guide you from offer to arrival — every step, dated and in order.
+                    Hi {ready[0]?.name.split(" ")[0] ?? "there"}, congratulations on your admission! {uni?.short ?? "Your school"} uses AfterAdmit to guide you from offer to arrival — every step, dated and in order.
                   </p>
                   <span className="mt-4 inline-flex rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-white">Accept your invite</span>
                   <p className="mt-3 text-[11px] text-subtle">Link expires in 14 days</p>
@@ -437,10 +475,10 @@ export default function InvitesPage() {
       </Card>
 
       <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard label="Invited" value={uni.students.toLocaleString("en-US")} hint={uni.terms[0] ?? "—"} icon={Mail} />
-        <KpiCard label="Joined" value={uni.signedUp.toLocaleString("en-US")} hint={uni.students ? `${Math.round((uni.signedUp / uni.students) * 100)}% activation` : "—"} icon={Check} />
+        <KpiCard label="Invited" value={(uni?.students ?? 0).toLocaleString("en-US")} hint="this school" icon={Mail} />
+        <KpiCard label="Joined" value={(uni?.signedUp ?? 0).toLocaleString("en-US")} hint={uni?.students ? `${Math.round((uni.signedUp / uni.students) * 100)}% activation` : "—"} icon={Check} />
         <KpiCard label="Not joined yet" value={notJoined.toLocaleString("en-US")} hint="reminder in 2 days" icon={RotateCw} />
-        <KpiCard label="Bounced" value={uni.students ? "4" : "0"} hint="check addresses" icon={AlertCircle} />
+        <KpiCard label="Bounced" value={String(tracking.filter((t) => t.status === "Bounced").length)} hint="check addresses" icon={AlertCircle} />
       </div>
 
       <Card className="mt-5">
@@ -477,6 +515,13 @@ export default function InvitesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {shown.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-10 text-center text-[13px] text-muted-foreground">
+                      No invites yet.
+                    </TableCell>
+                  </TableRow>
+                )}
                 {shown.map((t) => (
                   <TableRow key={t.email}>
                     <TableCell>

@@ -10,9 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
-import { replyToTicket, updateTicket, useTickets, type Ticket, type TicketPriority, type TicketStatus } from "@/components/support/support-store";
+import { replyToTicket, type Ticket, type TicketPriority, type TicketStatus } from "@/components/support/support-store";
 import { statusStyles } from "@/components/support/my-requests";
-import { loadSupportTickets } from "@/lib/admin-live";
+import { loadSupportTickets, updateSupportTicket } from "@/lib/admin-live";
 
 function titleCase(s: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
@@ -68,8 +68,35 @@ function Avatar({ t, size = 32 }: { t: Ticket; size?: number }) {
   );
 }
 
-function Detail({ t, onBack }: { t: Ticket; onBack: () => void }) {
+function Detail({
+  t,
+  onBack,
+  onTicketChange,
+}: {
+  t: Ticket;
+  onBack: () => void;
+  onTicketChange: (id: string, patch: Partial<Ticket>) => void;
+}) {
   const [reply, setReply] = React.useState("");
+
+  const patchTicket = (patch: Partial<Ticket>) => {
+    onTicketChange(t.id, patch);
+  };
+
+  const setStatus = (status: TicketStatus) => {
+    const rpcStatus = status.toLowerCase();
+    void updateSupportTicket(t.id, rpcStatus).catch((e) => {
+      toast.error(e instanceof Error ? e.message : "Could not update status");
+    });
+    patchTicket({ status });
+  };
+
+  const setPriority = (priority: TicketPriority) => {
+    void updateSupportTicket(t.id, undefined, priority.toLowerCase()).catch((e) => {
+      toast.error(e instanceof Error ? e.message : "Could not update priority");
+    });
+    patchTicket({ priority });
+  };
 
   const send = (resolve: boolean) => {
     if (!reply.trim()) return;
@@ -98,7 +125,7 @@ function Detail({ t, onBack }: { t: Ticket; onBack: () => void }) {
           </div>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <Select value={t.status} onValueChange={(v) => updateTicket(t.id, { status: v as TicketStatus })}>
+          <Select value={t.status} onValueChange={(v) => setStatus(v as TicketStatus)}>
             <SelectTrigger size="sm" className="w-full" aria-label="Status">
               <SelectValue />
             </SelectTrigger>
@@ -110,7 +137,7 @@ function Detail({ t, onBack }: { t: Ticket; onBack: () => void }) {
               ))}
             </SelectContent>
           </Select>
-          <Select value={t.priority} onValueChange={(v) => updateTicket(t.id, { priority: v as TicketPriority })}>
+          <Select value={t.priority} onValueChange={(v) => setPriority(v as TicketPriority)}>
             <SelectTrigger size="sm" className="w-full" aria-label="Priority">
               <SelectValue />
             </SelectTrigger>
@@ -122,7 +149,7 @@ function Detail({ t, onBack }: { t: Ticket; onBack: () => void }) {
               ))}
             </SelectContent>
           </Select>
-          <Select value={t.assignee} onValueChange={(v) => updateTicket(t.id, { assignee: v })}>
+          <Select value={t.assignee} onValueChange={(v) => patchTicket({ assignee: v })}>
             <SelectTrigger size="sm" className="w-full" aria-label="Assignee">
               <SelectValue />
             </SelectTrigger>
@@ -166,15 +193,17 @@ function Detail({ t, onBack }: { t: Ticket; onBack: () => void }) {
 }
 
 export default function SupportInboxPage() {
-  const mockTickets = useTickets();
-  const [liveTickets, setLiveTickets] = React.useState<Ticket[] | null>(null);
-  const tickets = liveTickets ?? mockTickets;
+  const [tickets, setTickets] = React.useState<Ticket[]>([]);
 
   React.useEffect(() => {
-    void loadSupportTickets().then((rows) => {
-      if (rows.length) setLiveTickets(rows.map((row) => ticketFromRow(row as Record<string, unknown>)));
-    });
+    void loadSupportTickets()
+      .then((rows) => setTickets(rows.map((row) => ticketFromRow(row as Record<string, unknown>))))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Could not load tickets"));
   }, []);
+
+  const onTicketChange = (id: string, patch: Partial<Ticket>) => {
+    setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  };
 
   const [filter, setFilter] = React.useState<(typeof filters)[number]>("Open");
   const [q, setQ] = React.useState("");
@@ -254,7 +283,7 @@ export default function SupportInboxPage() {
         </div>
         <div className={cn("min-h-0", !mobileDetail && "hidden lg:block")}>
           {selected ? (
-            <Detail key={selected.id} t={selected} onBack={() => setMobileDetail(false)} />
+            <Detail key={selected.id} t={selected} onBack={() => setMobileDetail(false)} onTicketChange={onTicketChange} />
           ) : (
             <div className="flex h-full items-center justify-center p-10 text-[13px] text-muted-foreground">Select a ticket</div>
           )}
