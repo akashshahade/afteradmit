@@ -43,15 +43,19 @@ function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") || "/admin";
-  const startCreate = searchParams.get("mode") === "create";
 
-  const [mode, setMode] = React.useState<"signin" | "create">(startCreate ? "create" : "signin");
-  const [firstName, setFirstName] = React.useState("");
-  const [lastName, setLastName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [show, setShow] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+
+  const friendlyError = (err: unknown, fallback: string) => {
+    const msg = err instanceof Error ? err.message : "";
+    if (!msg || msg.includes("NEXT_PUBLIC_") || msg.includes("SUPABASE")) {
+      return "Service temporarily unavailable. Please try again shortly.";
+    }
+    return msg || fallback;
+  };
 
   const goAdmin = () => {
     router.replace(nextPath.startsWith("/admin") ? nextPath : "/admin");
@@ -86,60 +90,7 @@ function AdminLoginForm() {
       toast.success("Signed in");
       goAdmin();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
-      toast.error("Fill in all fields");
-      return;
-    }
-    if (password.length < 8) {
-      toast.error("Use at least 8 characters for your password");
-      return;
-    }
-    setLoading(true);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            first_name: firstName.trim(),
-            last_name: lastName.trim(),
-          },
-        },
-      });
-      if (error) throw error;
-      if (!data.session) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (signInError) {
-          toast.success("Account created", {
-            description: "Confirm your email if required, then sign in.",
-          });
-          setMode("signin");
-          return;
-        }
-      }
-
-      const { error: regError } = await supabase.rpc("bootstrap_platform_admin", {
-        p_first_name: firstName.trim(),
-        p_last_name: lastName.trim(),
-      });
-      if (regError) throw regError;
-
-      toast.success("Platform admin created");
-      goAdmin();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not create account");
+      toast.error(friendlyError(err, "Something went wrong"));
     } finally {
       setLoading(false);
     }
@@ -162,27 +113,13 @@ function AdminLoginForm() {
 
         <div className="mx-auto flex w-full max-w-[360px] flex-1 flex-col justify-center py-8">
           <h1 className="text-[24px] font-semibold tracking-[-0.03em] text-ink">
-            {mode === "signin" ? "Admin sign in" : "Bootstrap platform admin"}
+            Admin sign in
           </h1>
           <p className="mt-1 text-[13.5px] text-muted-foreground">
-            {mode === "signin"
-              ? "Sign in to the AfterAdmit operations console."
-              : "Only available when no platform admin exists yet."}
+            Sign in to the AfterAdmit operations console.
           </p>
 
-          <form className="mt-6 space-y-3.5" onSubmit={mode === "signin" ? signIn : createAccount}>
-            {mode === "create" && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="first">First name</Label>
-                  <Input id="first" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="h-10" required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="last">Last name</Label>
-                  <Input id="last" value={lastName} onChange={(e) => setLastName(e.target.value)} className="h-10" required />
-                </div>
-              </div>
-            )}
+          <form className="mt-6 space-y-3.5" onSubmit={signIn}>
             <div className="space-y-1.5">
               <Label htmlFor="email">Work email</Label>
               <Input
@@ -202,13 +139,13 @@ function AdminLoginForm() {
                 <Input
                   id="password"
                   type={show ? "text" : "password"}
-                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={mode === "signin" ? "Your password" : "At least 8 characters"}
+                  placeholder="Your password"
                   className="h-10 pr-10"
                   required
-                  minLength={mode === "signin" ? 6 : 8}
+                  minLength={6}
                 />
                 <button
                   type="button"
@@ -221,34 +158,10 @@ function AdminLoginForm() {
               </div>
             </div>
             <Button type="submit" variant="ink" size="lg" className="w-full" disabled={loading}>
-              {loading
-                ? mode === "signin"
-                  ? "Signing in…"
-                  : "Creating account…"
-                : mode === "signin"
-                  ? "Sign in"
-                  : "Create admin"}
+              {loading ? "Signing in…" : "Sign in"}
               {!loading && <ArrowRight className="size-4" />}
             </Button>
           </form>
-
-          <p className="mt-6 text-center text-[12.5px] text-muted-foreground">
-            {mode === "signin" ? (
-              <>
-                First admin?{" "}
-                <button type="button" className="font-medium text-foreground hover:text-primary" onClick={() => setMode("create")}>
-                  Bootstrap account
-                </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{" "}
-                <button type="button" className="font-medium text-foreground hover:text-primary" onClick={() => setMode("signin")}>
-                  Sign in
-                </button>
-              </>
-            )}
-          </p>
         </div>
 
         <div className="flex items-center justify-between text-[12px] text-subtle">

@@ -49,10 +49,20 @@ function UniversityLoginForm() {
   const [mode, setMode] = React.useState<"signin" | "create">(startCreate ? "create" : "signin");
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
+  const [schoolName, setSchoolName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [show, setShow] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [submittedOrg, setSubmittedOrg] = React.useState<string | null>(null);
+
+  const friendlyError = (err: unknown, fallback: string) => {
+    const msg = err instanceof Error ? err.message : "";
+    if (!msg || msg.includes("NEXT_PUBLIC_") || msg.includes("SUPABASE")) {
+      return "Service temporarily unavailable. Please try again shortly.";
+    }
+    return msg || fallback;
+  };
 
   const goUniversity = () => {
     router.replace(nextPath.startsWith("/university") ? nextPath : "/university");
@@ -65,7 +75,17 @@ function UniversityLoginForm() {
     const row = (Array.isArray(profile) ? profile[0] : profile) as Profile | null;
     if (!row || row.role !== "university_admin") {
       await supabase.auth.signOut();
-      throw new Error("This account is not a university admin");
+      if (row?.requested_role === "university_admin" && row.approval_status === "pending") {
+        throw new Error("Your university access request is pending AfterAdmit approval. We'll email you once approved.");
+      }
+      if (row?.requested_role === "university_admin" && row.approval_status === "rejected") {
+        throw new Error(
+          row.rejection_reason
+            ? `Your access request was not approved: ${row.rejection_reason}`
+            : "Your university access request was not approved. Contact info@afteradmit.com.",
+        );
+      }
+      throw new Error("This account is not an approved university admin");
     }
   };
 
@@ -88,7 +108,7 @@ function UniversityLoginForm() {
       toast.success("Signed in");
       goUniversity();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      toast.error(friendlyError(err, "Something went wrong"));
     } finally {
       setLoading(false);
     }
@@ -96,7 +116,7 @@ function UniversityLoginForm() {
 
   const createAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
+    if (!firstName.trim() || !lastName.trim() || !schoolName.trim() || !email.trim() || !password) {
       toast.error("Fill in all fields");
       return;
     }
@@ -120,16 +140,15 @@ function UniversityLoginForm() {
       });
       if (error) throw error;
       if (!data.session) {
-        // Some projects require email confirm — try password sign-in (pilot auto-confirms)
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
         if (signInError) {
-          toast.success("Account created", {
-            description: "Confirm your email if required, then sign in.",
+          setSubmittedOrg(schoolName.trim());
+          toast.success("Request submitted", {
+            description: "Confirm your email, then wait for AfterAdmit approval.",
           });
-          setMode("signin");
           return;
         }
       }
@@ -137,14 +156,15 @@ function UniversityLoginForm() {
       const { error: regError } = await supabase.rpc("register_university_admin", {
         p_first_name: firstName.trim(),
         p_last_name: lastName.trim(),
-        p_school_name: null,
+        p_school_name: schoolName.trim(),
       });
       if (regError) throw regError;
 
-      toast.success("Account created");
-      goUniversity();
+      await supabase.auth.signOut();
+      setSubmittedOrg(schoolName.trim());
+      toast.success("Access request submitted for approval");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not create account");
+      toast.error(friendlyError(err, "Could not submit request"));
     } finally {
       setLoading(false);
     }
@@ -167,17 +187,44 @@ function UniversityLoginForm() {
         </div>
 
         <div className="mx-auto flex w-full max-w-[360px] flex-1 flex-col justify-center py-8">
+          {submittedOrg ? (
+            <div className="space-y-4 rounded-2xl border p-6">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1 text-[12px] font-medium text-primary">
+                Pending approval
+              </div>
+              <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-ink">
+                Request received
+              </h1>
+              <p className="text-[13.5px] leading-relaxed text-muted-foreground">
+                We received your university admin request for <span className="font-medium text-foreground">{submittedOrg}</span>.
+                An AfterAdmit admin will review it and email <span className="font-medium text-foreground">{email}</span> once approved.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setSubmittedOrg(null);
+                  setMode("signin");
+                }}
+              >
+                Back to sign in
+              </Button>
+            </div>
+          ) : (
+            <>
           <h1 className="text-[24px] font-semibold tracking-[-0.03em] text-ink">
-            {mode === "signin" ? "University sign in" : "Create university account"}
+            {mode === "signin" ? "University sign in" : "Request university access"}
           </h1>
           <p className="mt-1 text-[13.5px] text-muted-foreground">
             {mode === "signin"
               ? "Sign in to invite students and track your class."
-              : "Set up your school admin workspace. You’ll be linked to your school on AfterAdmit."}
+              : "Submit your school details. An AfterAdmit admin will verify and approve your workspace."}
           </p>
 
           <form className="mt-6 space-y-3.5" onSubmit={mode === "signin" ? signIn : createAccount}>
             {mode === "create" && (
+              <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="first">First name</Label>
@@ -200,6 +247,18 @@ function UniversityLoginForm() {
                   />
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="school">University name</Label>
+                <Input
+                  id="school"
+                  value={schoolName}
+                  onChange={(e) => setSchoolName(e.target.value)}
+                  placeholder="e.g. UCLA Anderson"
+                  className="h-10"
+                  required
+                />
+              </div>
+              </>
             )}
             <div className="space-y-1.5">
               <Label htmlFor="email">Work email</Label>
@@ -242,10 +301,10 @@ function UniversityLoginForm() {
               {loading
                 ? mode === "signin"
                   ? "Signing in…"
-                  : "Creating account…"
+                  : "Submitting request…"
                 : mode === "signin"
                   ? "Sign in"
-                  : "Create account"}
+                  : "Request access"}
               {!loading && <ArrowRight className="size-4" />}
             </Button>
           </form>
@@ -259,7 +318,7 @@ function UniversityLoginForm() {
                   className="font-medium text-foreground hover:text-primary"
                   onClick={() => setMode("create")}
                 >
-                  Create account
+                  Request access
                 </button>
               </>
             ) : (
@@ -275,6 +334,8 @@ function UniversityLoginForm() {
               </>
             )}
           </p>
+            </>
+          )}
         </div>
 
         <div className="flex items-center justify-between text-[12px] text-subtle">

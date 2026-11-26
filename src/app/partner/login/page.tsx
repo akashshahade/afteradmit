@@ -53,6 +53,15 @@ function PartnerLoginForm() {
   const [password, setPassword] = React.useState("");
   const [show, setShow] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [submittedOrg, setSubmittedOrg] = React.useState<string | null>(null);
+
+  const friendlyError = (err: unknown, fallback: string) => {
+    const msg = err instanceof Error ? err.message : "";
+    if (!msg || msg.includes("NEXT_PUBLIC_") || msg.includes("SUPABASE")) {
+      return "Service temporarily unavailable. Please try again shortly.";
+    }
+    return msg || fallback;
+  };
 
   const goPartner = () => {
     router.replace(nextPath.startsWith("/partner") ? nextPath : "/partner");
@@ -65,7 +74,17 @@ function PartnerLoginForm() {
     const row = (Array.isArray(profile) ? profile[0] : profile) as Profile | null;
     if (!row || row.role !== "partner") {
       await supabase.auth.signOut();
-      throw new Error("This account is not a partner");
+      if (row?.requested_role === "partner" && row.approval_status === "pending") {
+        throw new Error("Your partner request is pending AfterAdmit approval. We'll email you once approved.");
+      }
+      if (row?.requested_role === "partner" && row.approval_status === "rejected") {
+        throw new Error(
+          row.rejection_reason
+            ? `Your partner request was not approved: ${row.rejection_reason}`
+            : "Your partner request was not approved. Contact info@afteradmit.com.",
+        );
+      }
+      throw new Error("This account is not an approved partner");
     }
   };
 
@@ -87,7 +106,7 @@ function PartnerLoginForm() {
       toast.success("Signed in");
       goPartner();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      toast.error(friendlyError(err, "Something went wrong"));
     } finally {
       setLoading(false);
     }
@@ -123,10 +142,10 @@ function PartnerLoginForm() {
           password,
         });
         if (signInError) {
-          toast.success("Account created", {
-            description: "Confirm your email if required, then sign in.",
+          setSubmittedOrg(orgName.trim());
+          toast.success("Request submitted", {
+            description: "Confirm your email, then wait for AfterAdmit approval.",
           });
-          setMode("signin");
           return;
         }
       }
@@ -139,10 +158,11 @@ function PartnerLoginForm() {
       });
       if (regError) throw regError;
 
-      toast.success("Partner account created");
-      goPartner();
+      await supabase.auth.signOut();
+      setSubmittedOrg(orgName.trim());
+      toast.success("Partner request submitted for approval");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not create account");
+      toast.error(friendlyError(err, "Could not submit request"));
     } finally {
       setLoading(false);
     }
@@ -165,13 +185,39 @@ function PartnerLoginForm() {
         </div>
 
         <div className="mx-auto flex w-full max-w-[360px] flex-1 flex-col justify-center py-8">
+          {submittedOrg ? (
+            <div className="space-y-4 rounded-2xl border p-6">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1 text-[12px] font-medium text-primary">
+                Pending approval
+              </div>
+              <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-ink">
+                Request received
+              </h1>
+              <p className="text-[13.5px] leading-relaxed text-muted-foreground">
+                We received your partner request for <span className="font-medium text-foreground">{submittedOrg}</span>.
+                An AfterAdmit admin will review it and email <span className="font-medium text-foreground">{email}</span> once approved.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setSubmittedOrg(null);
+                  setMode("signin");
+                }}
+              >
+                Back to sign in
+              </Button>
+            </div>
+          ) : (
+            <>
           <h1 className="text-[24px] font-semibold tracking-[-0.03em] text-ink">
-            {mode === "signin" ? "Partner sign in" : "Create partner account"}
+            {mode === "signin" ? "Partner sign in" : "Request partner access"}
           </h1>
           <p className="mt-1 text-[13.5px] text-muted-foreground">
             {mode === "signin"
               ? "Sign in to manage listings and leads."
-              : "Create your company workspace on AfterAdmit."}
+              : "Submit your company details. An AfterAdmit admin will verify and approve your workspace."}
           </p>
 
           <form className="mt-6 space-y-3.5" onSubmit={mode === "signin" ? signIn : createAccount}>
@@ -241,10 +287,10 @@ function PartnerLoginForm() {
               {loading
                 ? mode === "signin"
                   ? "Signing in…"
-                  : "Creating account…"
+                  : "Submitting request…"
                 : mode === "signin"
                   ? "Sign in"
-                  : "Create account"}
+                  : "Request access"}
               {!loading && <ArrowRight className="size-4" />}
             </Button>
           </form>
@@ -254,7 +300,7 @@ function PartnerLoginForm() {
               <>
                 New partner?{" "}
                 <button type="button" className="font-medium text-foreground hover:text-primary" onClick={() => setMode("create")}>
-                  Create account
+                  Request access
                 </button>
               </>
             ) : (
@@ -266,6 +312,8 @@ function PartnerLoginForm() {
               </>
             )}
           </p>
+            </>
+          )}
         </div>
 
         <div className="flex items-center justify-between text-[12px] text-subtle">

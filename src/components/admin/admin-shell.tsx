@@ -14,6 +14,7 @@ import {
   Settings,
   UserPlus,
   Inbox,
+  UserCheck,
 } from "lucide-react";
 
 import { AppShell, type NavSection } from "@/components/shell/app-shell";
@@ -27,7 +28,10 @@ const notifications = [
 
 const sections: NavSection[] = [
   {
-    items: [{ label: "Overview", href: "/admin", icon: LayoutDashboard, exact: true }],
+    items: [
+      { label: "Overview", href: "/admin", icon: LayoutDashboard, exact: true },
+      { label: "Approvals", href: "/admin/approvals", icon: UserCheck },
+    ],
   },
   {
     label: "Content",

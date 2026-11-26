@@ -26,6 +26,10 @@ export type Profile = {
   batch_id?: string | null;
   partner_org_id?: string | null;
   notification_prefs?: Record<string, unknown> | null;
+  approval_status?: "pending" | "approved" | "rejected" | null;
+  requested_role?: "university_admin" | "partner" | null;
+  requested_org_name?: string | null;
+  rejection_reason?: string | null;
 };
 
 export function displayName(profile: Pick<Profile, "first_name" | "last_name" | "email">) {

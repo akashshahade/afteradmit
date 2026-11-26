@@ -65,6 +65,28 @@ export type AdminModeration = {
   }[];
 };
 
+export type AdminAccessRequest = {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: string;
+  requested_role: "university_admin" | "partner";
+  requested_org_name: string | null;
+  school_name: string | null;
+  approval_status: "pending" | "approved" | "rejected";
+  rejection_reason: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+};
+
+export async function loadAccessRequests(): Promise<AdminAccessRequest[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("list_access_requests");
+  if (error) return [];
+  return (data ?? []) as AdminAccessRequest[];
+}
+
 export async function loadAdminStats(): Promise<AdminStats | null> {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("admin_overview_stats");

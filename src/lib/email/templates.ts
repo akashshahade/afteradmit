@@ -101,3 +101,64 @@ export function inviteEmail(input: {
     text,
   };
 }
+
+export function accessDecisionEmail(input: {
+  firstName?: string | null;
+  roleLabel: string;
+  orgName: string;
+  approved: boolean;
+  reason?: string | null;
+  loginUrl: string;
+}) {
+  const first = (input.firstName ?? "").trim() || "there";
+  const org = input.orgName.trim() || "your organization";
+
+  if (input.approved) {
+    const body = `
+      <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">Hi ${esc(first)},</p>
+      <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">Your <strong>${esc(input.roleLabel)}</strong> access for <strong>${esc(org)}</strong> on AfterAdmit has been approved. You can sign in now.</p>
+    `;
+    const html = layout({
+      preheader: `Your AfterAdmit ${input.roleLabel.toLowerCase()} access is approved`,
+      heading: "Your access is approved",
+      body,
+      cta: { label: "Sign in to AfterAdmit", url: input.loginUrl },
+    });
+    const text = [
+      `Hi ${first},`,
+      "",
+      `Your ${input.roleLabel} access for ${org} on AfterAdmit has been approved.`,
+      "",
+      `Sign in: ${input.loginUrl}`,
+      "",
+      "Questions? Reply to this email or write to info@afteradmit.com",
+    ].join("\n");
+    return { subject: `Approved: ${org} on AfterAdmit`, html, text };
+  }
+
+  const reasonBlock = input.reason?.trim()
+    ? `<p style="margin:0 0 14px 0;font-family:${FONT};font-size:14px;line-height:22px;color:#6e6e76;">Note from AfterAdmit: ${esc(input.reason.trim())}</p>`
+    : "";
+  const body = `
+    <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">Hi ${esc(first)},</p>
+    <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">We could not approve your <strong>${esc(input.roleLabel)}</strong> access request for <strong>${esc(org)}</strong> at this time.</p>
+    ${reasonBlock}
+    <p style="margin:0;font-family:${FONT};font-size:14px;line-height:22px;color:#6e6e76;">If you believe this was a mistake, reply to this email and our team will help.</p>
+  `;
+  const html = layout({
+    preheader: `Update on your AfterAdmit access request`,
+    heading: "Update on your access request",
+    body,
+  });
+  const text = [
+    `Hi ${first},`,
+    "",
+    `We could not approve your ${input.roleLabel} access request for ${org} at this time.`,
+    input.reason?.trim() ? `Note: ${input.reason.trim()}` : "",
+    "",
+    "Reply to this email or write to info@afteradmit.com if you have questions.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return { subject: `Update on your AfterAdmit access request`, html, text };
+}
