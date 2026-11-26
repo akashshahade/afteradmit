@@ -5,8 +5,6 @@ import { inviteLinkPath } from "@/lib/invites";
 import { sendEmail } from "@/lib/email/resend";
 import { inviteEmail } from "@/lib/email/templates";
 
-export const runtime = "nodejs";
-
 const MAX_TOKENS = 200;
 
 type InviteRow = {
