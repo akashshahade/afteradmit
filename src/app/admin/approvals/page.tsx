@@ -4,7 +4,6 @@ import * as React from "react";
 import { toast } from "sonner";
 import { Check, X, Building2, Store, Clock } from "lucide-react";
 
-import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -65,11 +64,17 @@ export default function AdminApprovalsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow="Access control"
-        title="Access approvals"
-        description="Review university admin and partner requests before granting workspace access."
-      />
+      <div>
+        <div className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
+          Access control
+        </div>
+        <h1 className="mt-1 text-[24px] font-semibold tracking-[-0.03em] text-ink">
+          Access approvals
+        </h1>
+        <p className="mt-1 text-[13.5px] text-muted-foreground">
+          Review university admin and partner requests before granting workspace access.
+        </p>
+      </div>
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">
