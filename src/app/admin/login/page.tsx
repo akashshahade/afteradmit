@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
+import { ForgotPasswordButton, friendlyAuthError } from "@/components/auth/forgot-password-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,14 +50,6 @@ function AdminLoginForm() {
   const [show, setShow] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
 
-  const friendlyError = (err: unknown, fallback: string) => {
-    const msg = err instanceof Error ? err.message : "";
-    if (!msg || msg.includes("NEXT_PUBLIC_") || msg.includes("SUPABASE")) {
-      return "Service temporarily unavailable. Please try again shortly.";
-    }
-    return msg || fallback;
-  };
-
   const goAdmin = () => {
     router.replace(nextPath.startsWith("/admin") ? nextPath : "/admin");
     router.refresh();
@@ -90,7 +83,7 @@ function AdminLoginForm() {
       toast.success("Signed in");
       goAdmin();
     } catch (err) {
-      toast.error(friendlyError(err, "Something went wrong"));
+      toast.error(friendlyAuthError(err, "Something went wrong"));
     } finally {
       setLoading(false);
     }
@@ -134,7 +127,10 @@ function AdminLoginForm() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <ForgotPasswordButton email={email} portal="admin" />
+              </div>
               <div className="relative">
                 <Input
                   id="password"
@@ -165,7 +161,7 @@ function AdminLoginForm() {
         </div>
 
         <div className="flex items-center justify-between text-[12px] text-subtle">
-          <span>© 2027 AfterAdmit, Inc.</span>
+          <span>© 2026 AfterAdmit, Inc.</span>
           <div className="flex gap-4">
             <Link className="hover:text-foreground" href="/legal/privacy">
               Privacy

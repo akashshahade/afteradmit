@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
+import { ForgotPasswordButton, friendlyAuthError } from "@/components/auth/forgot-password-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -89,28 +90,9 @@ function LoginForm() {
       router.replace(destination);
       router.refresh();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong";
-      toast.error(message);
+      toast.error(friendlyAuthError(err, "Something went wrong"));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const resetPassword = async () => {
-    if (!email.trim()) {
-      toast.error("Enter your email first");
-      return;
-    }
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/login`,
-      });
-      if (error) throw error;
-      toast.success("Password reset link sent", { description: `Check ${email.trim()}` });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not send reset email";
-      toast.error(message);
     }
   };
 
@@ -153,13 +135,7 @@ function LoginForm() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <button
-                  type="button"
-                  onClick={resetPassword}
-                  className="text-[12.5px] font-medium text-muted-foreground hover:text-foreground"
-                >
-                  Forgot password?
-                </button>
+                <ForgotPasswordButton email={email} portal="student" />
               </div>
               <div className="relative">
                 <Input
@@ -216,7 +192,7 @@ function LoginForm() {
         </div>
 
         <div className="flex items-center justify-between text-[12px] text-subtle">
-          <span>© 2027 AfterAdmit, Inc.</span>
+          <span>© 2026 AfterAdmit, Inc.</span>
           <div className="flex gap-4">
             <Link className="hover:text-foreground" href="/legal/privacy">
               Privacy

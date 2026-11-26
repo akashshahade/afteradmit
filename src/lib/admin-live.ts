@@ -76,6 +76,7 @@ export type AdminAccessRequest = {
   school_name: string | null;
   approval_status: "pending" | "approved" | "rejected";
   rejection_reason: string | null;
+  application_details?: Record<string, string | null | undefined> | null;
   created_at: string;
   reviewed_at: string | null;
 };
