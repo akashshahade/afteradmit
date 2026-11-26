@@ -159,6 +159,30 @@ export default function UniversityInvitesPage() {
   const schoolName = profile?.school_name ?? "Your university";
   const schoolShort = schoolName.includes("Anderson") ? "Anderson" : schoolName.split(" ")[0] || "School";
 
+  const sendInviteEmails = async (tokens: string[]) => {
+    if (!tokens.length) return;
+    try {
+      const res = await fetch("/api/invites/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tokens }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { sent?: number; failed?: number; error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Could not send invite emails");
+      if (json.failed) {
+        toast.error(`${json.failed} invite email${json.failed === 1 ? "" : "s"} could not be sent`, {
+          description: "Use Copy link to share them manually.",
+        });
+      } else if (json.sent) {
+        toast.success(`${json.sent} invite email${json.sent === 1 ? "" : "s"} sent`);
+      }
+    } catch (err) {
+      toast.error("Invite emails could not be sent", {
+        description: err instanceof Error ? err.message : "Use Copy link to share them manually.",
+      });
+    }
+  };
+
   const createInvites = async (
     payload: Record<string, string>[],
     opts?: { onErrorStep?: Step },
@@ -185,6 +209,7 @@ export default function UniversityInvitesPage() {
       setProgress(100);
       setStep("sent");
       toast.success(`${created.length} invite${created.length === 1 ? "" : "s"} created`);
+      void sendInviteEmails(created.map((c) => c.token));
       return created;
     } catch (err) {
       setStep(opts?.onErrorStep ?? "review");
