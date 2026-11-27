@@ -114,11 +114,6 @@ export async function upsertSchool(payload: Record<string, unknown>) {
   if (error) throw error;
   return data as AdminSchool;
 }
-  const supabase = createClient();
-  const { data, error } = await supabase.rpc("upsert_school", { payload });
-  if (error) throw error;
-  return data as AdminSchool;
-}
 
 export async function loadAdminInvites(): Promise<AdminInvite[]> {
   const supabase = createClient();
