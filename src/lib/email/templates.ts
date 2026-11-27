@@ -162,3 +162,39 @@ export function accessDecisionEmail(input: {
     .join("\n");
   return { subject: `Update on your AfterAdmit access request`, html, text };
 }
+
+export function accessRequestReceivedEmail(input: {
+  firstName?: string | null;
+  roleLabel: string;
+  orgName: string;
+}) {
+  const first = (input.firstName ?? "").trim() || "there";
+  const org = input.orgName.trim() || "your organization";
+
+  const body = `
+    <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">Hi ${esc(first)},</p>
+    <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">We received your <strong>${esc(input.roleLabel)}</strong> access request for <strong>${esc(org)}</strong> on AfterAdmit.</p>
+    <p style="margin:0;font-family:${FONT};font-size:14px;line-height:22px;color:#6e6e76;">To protect student data, our team verifies every organization manually. We&apos;ll email you as soon as your workspace is approved.</p>
+  `;
+
+  const html = layout({
+    preheader: `We received your AfterAdmit ${input.roleLabel.toLowerCase()} request`,
+    heading: "Request received",
+    body,
+  });
+
+  const text = [
+    `Hi ${first},`,
+    "",
+    `We received your ${input.roleLabel} access request for ${org} on AfterAdmit.`,
+    "To protect student data, our team verifies every organization manually. We'll email you as soon as your workspace is approved.",
+    "",
+    "Questions? Reply to this email or write to info@afteradmit.com",
+  ].join("\n");
+
+  return {
+    subject: `We received your AfterAdmit request for ${org}`,
+    html,
+    text,
+  };
+}

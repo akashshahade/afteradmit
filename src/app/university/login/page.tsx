@@ -228,6 +228,7 @@ function UniversityLoginForm() {
       });
       if (regError) throw regError;
 
+      await fetch("/api/access-requests/notify", { method: "POST" }).catch(() => {});
       await supabase.auth.signOut();
       setStatusView({
         kind: "pending",

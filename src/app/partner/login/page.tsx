@@ -214,6 +214,7 @@ function PartnerLoginForm() {
       });
       if (regError) throw regError;
 
+      await fetch("/api/access-requests/notify", { method: "POST" }).catch(() => {});
       await supabase.auth.signOut();
       setStatusView({ kind: "pending", org: orgName.trim(), email: email.trim() });
       toast.success("Partner request submitted for approval");
