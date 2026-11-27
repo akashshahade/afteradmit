@@ -20,6 +20,7 @@ export type AdminSchool = {
   students: number;
   invited: number;
   joined: number;
+  batches: number;
   archived_at?: string | null;
 };
 
