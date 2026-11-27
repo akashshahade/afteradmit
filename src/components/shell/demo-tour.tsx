@@ -70,15 +70,13 @@ export function DemoTour({ role }: { role: Role }) {
 
   React.useEffect(() => {
     if (pathname !== homes[role]) return;
-    const seenKey = `aa-tour-seen-${role}`;
     const pending = sessionStorage.getItem(PENDING_KEY) === role;
-    if (!pending && localStorage.getItem(seenKey)) return;
+    if (!pending) return;
     sessionStorage.removeItem(PENDING_KEY);
     const t = window.setTimeout(() => {
-      localStorage.setItem(seenKey, "1");
       setIndex(0);
       setActive(true);
-    }, 900);
+    }, 600);
     return () => window.clearTimeout(t);
   }, [pathname, role]);
 

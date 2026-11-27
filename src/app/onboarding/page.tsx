@@ -539,7 +539,17 @@ export default function OnboardingPage() {
             </div>
 
             <div className="mt-8 flex flex-col gap-2 sm:flex-row">
-              <Button variant="ink" size="xl" className="w-full sm:w-auto" onClick={() => router.push("/student")}>
+              <Button
+                variant="ink"
+                size="xl"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem("aa-tour-pending", "student");
+                  } catch {}
+                  router.push("/student");
+                }}
+              >
                 <Route className="size-4" /> Go to my dashboard
               </Button>
               <Button

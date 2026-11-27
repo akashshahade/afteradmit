@@ -171,6 +171,9 @@ function SidebarNav({
 
 function NotificationsButton({ items }: { items: ShellNotification[] }) {
   const [list, setList] = React.useState(items);
+  React.useEffect(() => {
+    setList(items);
+  }, [items]);
   const unread = list.filter((n) => n.unread).length;
   return (
     <Popover>

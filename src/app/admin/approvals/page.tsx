@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { Check, X, Building2, Store, Clock, ExternalLink, ShieldCheck, AlertTriangle } from "lucide-react";
 
+import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -86,18 +87,12 @@ export default function AdminApprovalsPage() {
   const history = rows.filter((r) => r.approval_status !== "pending");
 
   return (
-    <div className="space-y-8">
-      <div>
-        <div className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
-          Access control
-        </div>
-        <h1 className="mt-1 text-[24px] font-semibold tracking-[-0.03em] text-ink">
-          Access approvals
-        </h1>
-        <p className="mt-1 text-[13.5px] text-muted-foreground">
-          Vet university admin and partner onboarding applications before granting workspace access.
-        </p>
-      </div>
+    <PageContainer className="space-y-8">
+      <PageHeader
+        eyebrow="Access control"
+        title="Access approvals"
+        description="Vet university admin and partner onboarding applications before granting workspace access."
+      />
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">
@@ -279,6 +274,6 @@ export default function AdminApprovalsPage() {
           </Card>
         </section>
       )}
-    </div>
+    </PageContainer>
   );
 }

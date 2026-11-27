@@ -1,7 +1,11 @@
-// Email-safe HTML built from AfterAdmit design tokens (globals.css).
-// ink #18181b · primary #ff4500 · muted #f4f4f5 · muted-foreground #6e6e76 · border #ececee
+// Branded, email-safe HTML built from AfterAdmit design tokens (globals.css).
+// ink #18181b · primary #ff4500 · primary-soft #fff1eb · muted #f4f4f5 · muted-foreground #6e6e76 · border #ececee
 
-const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+const FONT = "'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+
+function assetOrigin() {
+  return (process.env.NEXT_PUBLIC_SITE_URL || "https://afteradmit.vercel.app").replace(/\/$/, "");
+}
 
 function esc(s: string) {
   return s
@@ -11,38 +15,91 @@ function esc(s: string) {
     .replace(/"/g, "&quot;");
 }
 
-function layout(opts: { preheader: string; heading: string; body: string; cta?: { label: string; url: string }; footnote?: string }) {
+function detailBox(rows: { label: string; value: string }[]) {
+  const valid = rows.filter((r) => r.value.trim());
+  if (!valid.length) return "";
+  const items = valid
+    .map(
+      (r, idx) => `<tr>
+        <td style="padding:${idx === 0 ? "12px 16px 6px 16px" : idx === valid.length - 1 ? "6px 16px 12px 16px" : "6px 16px"};font-family:${FONT};font-size:13px;line-height:19px;color:#6e6e76;width:120px;vertical-align:top;">${esc(r.label)}</td>
+        <td style="padding:${idx === 0 ? "12px 16px 6px 16px" : idx === valid.length - 1 ? "6px 16px 12px 16px" : "6px 16px"};font-family:${FONT};font-size:13.5px;line-height:19px;font-weight:600;color:#18181b;vertical-align:top;">${esc(r.value)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 4px 0;background:#fafafa;border:1px solid #ececee;border-radius:12px;">
+    ${items}
+  </table>`;
+}
+
+function layout(opts: {
+  preheader: string;
+  eyebrow: string;
+  heading: string;
+  body: string;
+  cta?: { label: string; url: string };
+  footnote?: string;
+}) {
+  const logoUrl = `${assetOrigin()}/apple-icon`;
   const cta = opts.cta
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 8px 0;">
-        <tr><td style="border-radius:12px;background:#18181b;">
-          <a href="${esc(opts.cta.url)}" style="display:inline-block;padding:13px 22px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:12px;">${esc(opts.cta.label)}</a>
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 6px 0;">
+        <tr><td style="border-radius:10px;background:#18181b;">
+          <a href="${esc(opts.cta.url)}" style="display:inline-block;padding:13px 22px;font-family:${FONT};font-size:14.5px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:10px;letter-spacing:-0.01em;">${esc(opts.cta.label)} &rarr;</a>
         </td></tr>
       </table>
-      <p style="margin:12px 0 0 0;font-family:${FONT};font-size:12px;line-height:18px;color:#6e6e76;word-break:break-all;">Or paste this link into your browser:<br/><a href="${esc(opts.cta.url)}" style="color:#ff4500;">${esc(opts.cta.url)}</a></p>`
+      <p style="margin:14px 0 0 0;font-family:${FONT};font-size:12px;line-height:18px;color:#6e6e76;word-break:break-all;">Or copy and paste this link into your browser:<br/><a href="${esc(opts.cta.url)}" style="color:#ff4500;text-decoration:none;">${esc(opts.cta.url)}</a></p>`
     : "";
 
   return `<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${esc(opts.heading)}</title></head>
-<body style="margin:0;padding:0;background:#f4f4f5;">
-  <span style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(opts.preheader)}</span>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 12px;">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${esc(opts.heading)}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+    body, table, td, p, h1, a { font-family: ${FONT} !important; }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;-webkit-font-smoothing:antialiased;">
+  <span style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">${esc(opts.preheader)}</span>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:36px 14px;">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #ececee;border-radius:16px;">
-        <tr><td style="padding:28px 32px 0 32px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #ececee;border-radius:16px;overflow:hidden;">
+        <!-- Subtle brand top accent -->
+        <tr><td style="height:3px;background:#ff4500;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+        <!-- Header with official AfterAdmit logo mark + wordmark -->
+        <tr><td style="padding:28px 32px 20px 32px;border-bottom:1px solid #f4f4f5;">
           <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-            <td style="width:28px;height:28px;background:#ff4500;border-radius:8px;text-align:center;font-family:${FONT};font-size:14px;font-weight:700;color:#ffffff;line-height:28px;">A</td>
-            <td style="padding-left:10px;font-family:${FONT};font-size:15px;font-weight:600;color:#121214;letter-spacing:-0.01em;">AfterAdmit</td>
+            <td style="vertical-align:middle;">
+              <img src="${esc(logoUrl)}" width="30" height="30" alt="AfterAdmit" style="display:block;width:30px;height:30px;border-radius:8px;border:0;"/>
+            </td>
+            <td style="padding-left:10px;vertical-align:middle;font-family:${FONT};font-size:17px;font-weight:700;letter-spacing:-0.03em;color:#18181b;">
+              After<span style="color:#ff4500;">Admit</span>
+            </td>
           </tr></table>
         </td></tr>
-        <tr><td style="padding:24px 32px 32px 32px;font-family:${FONT};color:#121214;">
-          <h1 style="margin:0 0 12px 0;font-family:${FONT};font-size:22px;line-height:28px;font-weight:600;letter-spacing:-0.02em;color:#121214;">${esc(opts.heading)}</h1>
+
+        <!-- Body -->
+        <tr><td style="padding:28px 32px 32px 32px;font-family:${FONT};color:#121214;">
+          <div style="display:inline-block;padding:4px 10px;border-radius:999px;background:#fff1eb;color:#ff4500;font-family:${FONT};font-size:11.5px;font-weight:600;letter-spacing:0.03em;text-transform:uppercase;">${esc(opts.eyebrow)}</div>
+          <h1 style="margin:14px 0 12px 0;font-family:${FONT};font-size:24px;line-height:30px;font-weight:600;letter-spacing:-0.03em;color:#18181b;">${esc(opts.heading)}</h1>
           ${opts.body}
           ${cta}
-          ${opts.footnote ? `<p style="margin:24px 0 0 0;font-family:${FONT};font-size:12.5px;line-height:19px;color:#6e6e76;">${opts.footnote}</p>` : ""}
+          ${opts.footnote ? `<p style="margin:24px 0 0 0;padding-top:16px;border-top:1px solid #f4f4f5;font-family:${FONT};font-size:12.5px;line-height:19px;color:#6e6e76;">${opts.footnote}</p>` : ""}
         </td></tr>
       </table>
-      <p style="margin:16px 0 0 0;font-family:${FONT};font-size:12px;line-height:18px;color:#6e6e76;">© 2027 AfterAdmit, Inc. · Questions? Reply to this email or write to info@afteradmit.com</p>
+
+      <!-- Footer -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin-top:16px;">
+        <tr><td align="center" style="font-family:${FONT};font-size:12px;line-height:18px;color:#6e6e76;">
+          © 2026 AfterAdmit, Inc. &middot; From admit to arrival.<br/>
+          Questions? Reply to this email or contact <a href="mailto:info@afteradmit.com" style="color:#18181b;text-decoration:underline;">info@afteradmit.com</a>
+        </td></tr>
+      </table>
     </td></tr>
   </table>
 </body>
@@ -58,41 +115,49 @@ export function inviteEmail(input: {
   expiresAt?: string | null;
 }) {
   const first = input.firstName.trim() || "there";
-  const school = input.schoolName.trim() || "your university";
-  const programLine = [input.program, input.intake].filter(Boolean).join(" · ");
+  const school = input.schoolName.trim() || "Your university";
   const expires = input.expiresAt
     ? new Date(input.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : null;
 
-  const body = `
-    <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#121214;">Hi ${esc(first)},</p>
-    <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#121214;">
-      <strong>${esc(school)}</strong> has invited you to AfterAdmit, your personal path from admit to arrival. Create your account to see your roadmap, deadlines, and classmates.
-    </p>
-    ${programLine ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 0 0;background:#f4f4f5;border-radius:12px;width:100%;"><tr><td style="padding:14px 16px;font-family:${FONT};font-size:13.5px;line-height:20px;color:#6e6e76;">Your program<br/><span style="color:#121214;font-size:15px;font-weight:600;">${esc(programLine)}</span></td></tr></table>` : ""}`;
+  const details = detailBox([
+    { label: "University", value: school },
+    { label: "Program", value: input.program?.trim() || "" },
+    { label: "Intake", value: input.intake?.trim() || "" },
+  ]);
 
-  const footnote = expires ? `This invite link expires on ${esc(expires)}.` : "";
+  const body = `
+    <p style="margin:0 0 12px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#121214;">Hi ${esc(first)},</p>
+    <p style="margin:0 0 6px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#3f3f46;"><strong>${esc(school)}</strong> has invited you to AfterAdmit — your personal pre-arrival roadmap with deadlines, visa &amp; housing guidance, vetted providers, and your incoming classmates.</p>
+    ${details}
+  `;
+
+  const footnote = expires
+    ? `This personal invite link expires on ${esc(expires)}. If you didn't expect this email, you can safely ignore it.`
+    : "If you didn't expect this email, you can safely ignore it.";
 
   const html = layout({
     preheader: `${school} invited you to AfterAdmit`,
-    heading: `${school} invited you`,
+    eyebrow: "University Invite",
+    heading: `Welcome to ${school} on AfterAdmit`,
     body,
-    cta: { label: "Create your account", url: input.inviteUrl },
+    cta: { label: "Accept invite & create account", url: input.inviteUrl },
     footnote,
   });
 
   const text = [
     `Hi ${first},`,
     "",
-    `${school} has invited you to AfterAdmit, your personal path from admit to arrival.`,
-    programLine ? `Program: ${programLine}` : "",
+    `${school} has invited you to AfterAdmit — your personal path from admit to arrival.`,
+    input.program ? `Program: ${input.program}` : "",
+    input.intake ? `Intake: ${input.intake}` : "",
     "",
-    `Create your account: ${input.inviteUrl}`,
+    `Accept your invite: ${input.inviteUrl}`,
     expires ? `This invite link expires on ${expires}.` : "",
     "",
     "Questions? Reply to this email or write to info@afteradmit.com",
   ]
-    .filter((l) => l !== undefined)
+    .filter(Boolean)
     .join("\n");
 
   return {
@@ -114,15 +179,23 @@ export function accessDecisionEmail(input: {
   const org = input.orgName.trim() || "your organization";
 
   if (input.approved) {
+    const details = detailBox([
+      { label: "Organization", value: org },
+      { label: "Workspace", value: input.roleLabel },
+      { label: "Status", value: "Approved & active" },
+    ]);
     const body = `
-      <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">Hi ${esc(first)},</p>
-      <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">Your <strong>${esc(input.roleLabel)}</strong> access for <strong>${esc(org)}</strong> on AfterAdmit has been approved. You can sign in now.</p>
+      <p style="margin:0 0 12px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#121214;">Hi ${esc(first)},</p>
+      <p style="margin:0 0 6px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#3f3f46;">Your <strong>${esc(input.roleLabel)}</strong> workspace for <strong>${esc(org)}</strong> has been verified and approved. You can sign in right away.</p>
+      ${details}
     `;
     const html = layout({
       preheader: `Your AfterAdmit ${input.roleLabel.toLowerCase()} access is approved`,
-      heading: "Your access is approved",
+      eyebrow: "Access Approved",
+      heading: "Your workspace is ready",
       body,
       cta: { label: "Sign in to AfterAdmit", url: input.loginUrl },
+      footnote: "Need help onboarding your team or uploading your first student cohort? Simply reply to this email.",
     });
     const text = [
       `Hi ${first},`,
@@ -136,19 +209,26 @@ export function accessDecisionEmail(input: {
     return { subject: `Approved: ${org} on AfterAdmit`, html, text };
   }
 
+  const details = detailBox([
+    { label: "Organization", value: org },
+    { label: "Requested", value: input.roleLabel },
+    { label: "Status", value: "Not approved" },
+  ]);
   const reasonBlock = input.reason?.trim()
-    ? `<p style="margin:0 0 14px 0;font-family:${FONT};font-size:14px;line-height:22px;color:#6e6e76;">Note from AfterAdmit: ${esc(input.reason.trim())}</p>`
+    ? `<p style="margin:16px 0 0 0;font-family:${FONT};font-size:14px;line-height:22px;color:#3f3f46;"><strong>Note from our team:</strong> ${esc(input.reason.trim())}</p>`
     : "";
   const body = `
-    <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">Hi ${esc(first)},</p>
-    <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">We could not approve your <strong>${esc(input.roleLabel)}</strong> access request for <strong>${esc(org)}</strong> at this time.</p>
+    <p style="margin:0 0 12px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#121214;">Hi ${esc(first)},</p>
+    <p style="margin:0 0 6px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#3f3f46;">We reviewed your <strong>${esc(input.roleLabel)}</strong> request for <strong>${esc(org)}</strong> and could not approve it at this time.</p>
+    ${details}
     ${reasonBlock}
-    <p style="margin:0;font-family:${FONT};font-size:14px;line-height:22px;color:#6e6e76;">If you believe this was a mistake, reply to this email and our team will help.</p>
   `;
   const html = layout({
-    preheader: `Update on your AfterAdmit access request`,
+    preheader: "Update on your AfterAdmit access request",
+    eyebrow: "Access Update",
     heading: "Update on your access request",
     body,
+    footnote: "If you believe this was a mistake, reply directly to this email from your institutional work address and our team will re-review.",
   });
   const text = [
     `Hi ${first},`,
@@ -160,7 +240,7 @@ export function accessDecisionEmail(input: {
   ]
     .filter(Boolean)
     .join("\n");
-  return { subject: `Update on your AfterAdmit access request`, html, text };
+  return { subject: "Update on your AfterAdmit access request", html, text };
 }
 
 export function accessRequestReceivedEmail(input: {
@@ -171,23 +251,31 @@ export function accessRequestReceivedEmail(input: {
   const first = (input.firstName ?? "").trim() || "there";
   const org = input.orgName.trim() || "your organization";
 
+  const details = detailBox([
+    { label: "Organization", value: org },
+    { label: "Workspace", value: input.roleLabel },
+    { label: "Status", value: "Pending verification" },
+  ]);
+
   const body = `
-    <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">Hi ${esc(first)},</p>
-    <p style="margin:0 0 14px 0;font-family:${FONT};font-size:15px;line-height:23px;color:#121214;">We received your <strong>${esc(input.roleLabel)}</strong> access request for <strong>${esc(org)}</strong> on AfterAdmit.</p>
-    <p style="margin:0;font-family:${FONT};font-size:14px;line-height:22px;color:#6e6e76;">To protect student data, our team verifies every organization manually. We&apos;ll email you as soon as your workspace is approved.</p>
+    <p style="margin:0 0 12px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#121214;">Hi ${esc(first)},</p>
+    <p style="margin:0 0 6px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#3f3f46;">We received your onboarding request for <strong>${esc(org)}</strong>. To protect admitted students, our team verifies every organization manually before granting access.</p>
+    ${details}
   `;
 
   const html = layout({
     preheader: `We received your AfterAdmit ${input.roleLabel.toLowerCase()} request`,
-    heading: "Request received",
+    eyebrow: "Request Received",
+    heading: "We're reviewing your request",
     body,
+    footnote: "You'll receive an email with a direct sign-in link as soon as your workspace is approved.",
   });
 
   const text = [
     `Hi ${first},`,
     "",
     `We received your ${input.roleLabel} access request for ${org} on AfterAdmit.`,
-    "To protect student data, our team verifies every organization manually. We'll email you as soon as your workspace is approved.",
+    "To protect admitted students, our team verifies every organization manually. We'll email you as soon as your workspace is approved.",
     "",
     "Questions? Reply to this email or write to info@afteradmit.com",
   ].join("\n");
