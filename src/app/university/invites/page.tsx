@@ -188,7 +188,9 @@ export default function UniversityInvitesPage() {
     opts?: { onErrorStep?: Step },
   ) => {
     if (!batchId) {
-      toast.error("Select a batch before inviting");
+      toast.error("Create a batch first", {
+        description: "Open Batches, add a cohort with a program start date, then come back to invite.",
+      });
       return null;
     }
     setStep("sending");
@@ -383,9 +385,9 @@ export default function UniversityInvitesPage() {
                 {selectedBatch ? ` (${formatDate(selectedBatch.program_start)})` : ""}.
               </CardDescription>
             </div>
-            <Select value={batchId} onValueChange={setBatchId}>
+            <Select value={batchId} onValueChange={setBatchId} disabled={batches.length === 0}>
               <SelectTrigger className="w-full sm:w-[280px]">
-                <SelectValue placeholder="Select batch" />
+                <SelectValue placeholder={batches.length ? "Select batch" : "No batches yet"} />
               </SelectTrigger>
               <SelectContent>
                 {batches.map((b) => (
@@ -397,6 +399,14 @@ export default function UniversityInvitesPage() {
               </SelectContent>
             </Select>
           </div>
+          {batches.length === 0 && (
+            <p className="text-[13px] text-muted-foreground">
+              Create a batch before inviting students.{" "}
+              <a href="/university/batches" className="font-medium text-primary hover:underline">
+                Create your first batch
+              </a>
+            </p>
+          )}
         </CardHeader>
       </Card>
 
@@ -426,7 +436,7 @@ export default function UniversityInvitesPage() {
                       id="one-name"
                       value={oneName}
                       onChange={(e) => setOneName(e.target.value)}
-                      placeholder="Sayali Dhale"
+                      placeholder="Jordan Lee"
                       className="h-10"
                       required
                     />

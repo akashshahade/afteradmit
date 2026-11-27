@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Copy, Share2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PageContainer, PageHeader } from "@/components/shell/app-shell";
+import { requestTour } from "@/components/shell/demo-tour";
 import { KpiCard } from "@/components/charts/chart-bits";
 import { createClient } from "@/lib/supabase/client";
 import { inviteLinkPath } from "@/lib/invites";
@@ -48,6 +49,9 @@ const statusClass: Record<string, string> = {
 };
 
 export default function UniversityOverviewPage() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [welcome, setWelcome] = React.useState(false);
   const [rows, setRows] = React.useState<InviteRow[]>([]);
   const [batches, setBatches] = React.useState<AdmissionBatch[]>([]);
   const [batchId, setBatchId] = React.useState<string>("all");
@@ -93,6 +97,14 @@ export default function UniversityOverviewPage() {
   React.useEffect(() => {
     void load();
   }, [load]);
+
+  React.useEffect(() => {
+    if (localStorage.getItem("aa-uni-welcomed")) return;
+    localStorage.setItem("aa-uni-welcomed", "1");
+    setWelcome(true);
+    const timer = window.setTimeout(() => requestTour("university", pathname, router.push), 700);
+    return () => window.clearTimeout(timer);
+  }, [pathname, router]);
 
   const selectedBatch = batches.find((b) => b.id === batchId);
   const invited = rows.length;
@@ -165,6 +177,28 @@ export default function UniversityOverviewPage() {
           </div>
         }
       />
+
+      {welcome && (
+        <Card className="mt-6 overflow-hidden">
+          <CardContent className="relative p-5 sm:p-6">
+            <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-primary">Welcome to your workspace</div>
+            <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.03em]">Your university is live. Start with three things.</h2>
+            <ol className="mt-3 space-y-1.5 text-[13.5px] text-muted-foreground">
+              <li>1. Create a batch with the program start date.</li>
+              <li>2. Invite your admitted students — they join from the email, no AfterAdmit approval needed.</li>
+              <li>3. Watch who has joined from this overview.</li>
+            </ol>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="ink">
+                <Link href="/university/batches">Create a batch</Link>
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setWelcome(false)}>
+                Got it
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5" data-tour="kpis">
         <KpiCard label="Invited" value={String(invited)} hint="In this view" />

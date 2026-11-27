@@ -20,7 +20,7 @@ export type AdminSchool = {
   students: number;
   invited: number;
   joined: number;
-  batches: number;
+  archived_at?: string | null;
 };
 
 export type AdminInvite = {
@@ -102,7 +102,18 @@ export async function loadAdminSchools(): Promise<AdminSchool[]> {
   return (data ?? []) as AdminSchool[];
 }
 
+export async function setSchoolArchived(name: string, archived: boolean) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("set_school_archived", { p_name: name, p_archived: archived });
+  if (error) throw error;
+}
+
 export async function upsertSchool(payload: Record<string, unknown>) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("upsert_school", { payload });
+  if (error) throw error;
+  return data as AdminSchool;
+}
   const supabase = createClient();
   const { data, error } = await supabase.rpc("upsert_school", { payload });
   if (error) throw error;

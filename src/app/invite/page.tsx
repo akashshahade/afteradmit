@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowRight, CalendarDays, Check, Clock, Eye, EyeOff, MailCheck, ShieldCheck } from "lucide-react";
@@ -200,8 +199,8 @@ function InviteBody() {
 
       <div className="mx-auto grid w-full max-w-[1040px] flex-1 content-center gap-8 px-5 py-6 sm:px-6 md:grid-cols-[1fr_380px] md:gap-10 md:py-8 lg:items-center lg:overflow-hidden">
         <div className="min-w-0">
-          <div className="inline-flex items-center gap-3 rounded-xl border px-3 py-2">
-            <Image src="/ucla-anderson.svg" alt={invite.school_name} width={160} height={30} className="h-[22px] w-auto" priority />
+          <div className="inline-flex items-center gap-3 rounded-xl border px-3 py-2 text-[13px] font-semibold">
+            {invite.school_short || invite.school_name}
           </div>
           <h1 className="mt-4 text-[28px] font-semibold leading-[1.12] tracking-[-0.035em] text-ink sm:text-[32px]">
             Congratulations{invite.first_name ? `, ${invite.first_name}` : ""}.
@@ -338,6 +337,14 @@ function InviteBody() {
           </form>
         </div>
       </div>
+      <footer className="flex h-12 shrink-0 items-center justify-between border-t px-5 text-[12px] text-muted-foreground sm:px-6">
+        <span>© 2026 AfterAdmit, Inc.</span>
+        <div className="flex gap-4">
+          <Link href="/help" className="hover:text-foreground">Help</Link>
+          <Link href="/legal/privacy" className="hover:text-foreground">Privacy</Link>
+          <Link href="/legal/terms" className="hover:text-foreground">Terms</Link>
+        </div>
+      </footer>
     </div>
   );
 }

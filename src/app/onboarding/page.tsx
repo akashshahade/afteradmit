@@ -325,7 +325,7 @@ export default function OnboardingPage() {
       <div className="flex min-h-dvh flex-col bg-white">
         <header className="flex h-14 items-center justify-between border-b px-5 sm:px-8">
           <Logo size="sm" />
-          <Image src={school.logo} alt={school.name} width={140} height={26} className="h-[22px] w-auto opacity-90" />
+          <span className="text-[13px] text-muted-foreground">Student onboarding</span>
         </header>
         <div className="grid flex-1 place-items-center gap-3 text-[13px] text-muted-foreground">
           <Loader2 className="size-6 animate-spin text-primary" />
@@ -355,7 +355,18 @@ export default function OnboardingPage() {
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col bg-[radial-gradient(900px_480px_at_10%_-10%,#fff1eb,transparent),linear-gradient(#fff,#fff)]">
       <header className="flex h-14 shrink-0 items-center justify-between px-5 sm:px-8">
         <Logo size="sm" />
-        <Image src={school.logo} alt={school.name} width={140} height={26} className="h-[22px] w-auto opacity-90" />
+        <div className="flex items-center gap-4 text-[13px]">
+          <span className="hidden text-muted-foreground sm:inline">{profile?.school_name || "Your university"}</span>
+          <button
+            type="button"
+            className="font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              void createClient().auth.signOut().then(() => router.replace("/login"));
+            }}
+          >
+            Sign out
+          </button>
+        </div>
       </header>
       <div className="h-[3px] w-full bg-muted">
         <div
@@ -486,7 +497,7 @@ export default function OnboardingPage() {
             <Loader2 className="size-7 animate-spin text-primary" />
             <h2 className="mt-5 text-[20px] font-semibold tracking-tight">Building your roadmap…</h2>
             <p className="mt-1.5 max-w-sm text-[13.5px] text-muted-foreground">
-              Personalizing {school.name} milestones from your answers.
+              Personalizing {profile?.school_name || "your"} milestones from your answers.
             </p>
           </div>
         )}
@@ -564,6 +575,13 @@ export default function OnboardingPage() {
           </div>
         )}
       </div>
+      <footer className="flex h-12 items-center justify-between px-5 text-[12px] text-muted-foreground sm:px-8">
+        <span>Step {phase === "questions" ? step + 1 : phase === "welcome" ? 0 : total} of {total}</span>
+        <div className="flex gap-4">
+          <a href="/help" className="hover:text-foreground">Help</a>
+          <a href="/legal/privacy" className="hover:text-foreground">Privacy</a>
+        </div>
+      </footer>
       </div>
     </div>
   );

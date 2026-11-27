@@ -69,8 +69,6 @@ function layout(opts: {
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #ececee;border-radius:16px;overflow:hidden;">
         <!-- Subtle brand top accent -->
-        <tr><td style="height:3px;background:#ff4500;font-size:0;line-height:0;">&nbsp;</td></tr>
-
         <!-- Header with official AfterAdmit logo mark + wordmark -->
         <tr><td style="padding:28px 32px 20px 32px;border-bottom:1px solid #f4f4f5;">
           <table role="presentation" cellpadding="0" cellspacing="0"><tr>
@@ -97,7 +95,8 @@ function layout(opts: {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin-top:16px;">
         <tr><td align="center" style="font-family:${FONT};font-size:12px;line-height:18px;color:#6e6e76;">
           © 2026 AfterAdmit, Inc. &middot; From admit to arrival.<br/>
-          Questions? Reply to this email or contact <a href="mailto:info@afteradmit.com" style="color:#18181b;text-decoration:underline;">info@afteradmit.com</a>
+          This message was sent automatically by AfterAdmit. Please do not reply to this email.<br/>
+          Need a person? Write to <a href="mailto:info@afteradmit.com" style="color:#18181b;text-decoration:underline;">info@afteradmit.com</a>
         </td></tr>
       </table>
     </td></tr>
@@ -186,7 +185,7 @@ export function accessDecisionEmail(input: {
     ]);
     const body = `
       <p style="margin:0 0 12px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#121214;">Hi ${esc(first)},</p>
-      <p style="margin:0 0 6px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#3f3f46;">Your <strong>${esc(input.roleLabel)}</strong> workspace for <strong>${esc(org)}</strong> has been verified and approved. You can sign in right away.</p>
+      <p style="margin:0 0 6px 0;font-family:${FONT};font-size:15px;line-height:24px;color:#3f3f46;">Welcome aboard. Your <strong>${esc(input.roleLabel)}</strong> workspace for <strong>${esc(org)}</strong> is verified and ready. Sign in to invite your class, set up your first batch, and start the term.</p>
       ${details}
     `;
     const html = layout({
@@ -247,11 +246,13 @@ export function accessRequestReceivedEmail(input: {
   firstName?: string | null;
   roleLabel: string;
   orgName: string;
+  reference?: string | null;
 }) {
   const first = (input.firstName ?? "").trim() || "there";
   const org = input.orgName.trim() || "your organization";
 
   const details = detailBox([
+    { label: "Request no.", value: input.reference?.trim() || "" },
     { label: "Organization", value: org },
     { label: "Workspace", value: input.roleLabel },
     { label: "Status", value: "Pending verification" },

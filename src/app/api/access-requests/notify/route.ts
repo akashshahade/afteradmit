@@ -22,6 +22,7 @@ export async function POST() {
     requested_role: "university_admin" | "partner" | null;
     requested_org_name: string | null;
     approval_status: string | null;
+    application_details?: { reference?: string } | null;
   };
 
   if (row.approval_status !== "pending" || !row.requested_role) {
@@ -35,6 +36,7 @@ export async function POST() {
     firstName: row.first_name,
     roleLabel,
     orgName,
+    reference: row.application_details?.reference,
   });
 
   const mail = await sendEmail({

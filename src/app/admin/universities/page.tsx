@@ -20,7 +20,7 @@ import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { FormSheet, type FormSheetConfig } from "@/components/shell/form-sheet";
 import { type University } from "@/lib/ops-data";
 import { providers } from "@/lib/data";
-import { loadAdminSchools, upsertSchool, type AdminSchool } from "@/lib/admin-live";
+import { loadAdminSchools, setSchoolArchived, upsertSchool, type AdminSchool } from "@/lib/admin-live";
 
 function schoolColor(name: string) {
   let h = 0;
@@ -29,7 +29,7 @@ function schoolColor(name: string) {
   return `#${hex}`;
 }
 
-function mapAdminSchool(s: AdminSchool): University & { inviteTotal: number } {
+function mapAdminSchool(s: AdminSchool): University & { inviteTotal: number; archived: boolean } {
   const short = s.short_name ?? s.name;
   return {
     id: s.name,
@@ -40,10 +40,11 @@ function mapAdminSchool(s: AdminSchool): University & { inviteTotal: number } {
     students: s.students,
     signedUp: s.joined,
     avgProgress: s.invited ? Math.round((s.joined / s.invited) * 100) : 0,
-    status: s.students > 0 ? "Live" : "Onboarding",
+    status: s.archived_at ? "Onboarding" : s.students > 0 ? "Live" : "Onboarding",
     color: schoolColor(s.name),
     admins: 0,
     inviteTotal: s.invited,
+    archived: Boolean(s.archived_at),
   };
 }
 
@@ -256,9 +257,8 @@ function UniversitiesInner() {
   const router = useRouter();
   const [open, setOpen] = React.useState(params.get("new") === "1");
   const [form, setForm] = React.useState<FormSheetConfig | null>(null);
-  const [archived, setArchived] = React.useState<string[]>([]);
   const [q, setQ] = React.useState("");
-  const [universities, setUniversities] = React.useState<(University & { inviteTotal: number })[]>([]);
+  const [universities, setUniversities] = React.useState<(University & { inviteTotal: number; archived: boolean })[]>([]);
 
   const reloadSchools = React.useCallback(() => {
     void loadAdminSchools().then((rows) => setUniversities(rows.map(mapAdminSchool)));
@@ -268,7 +268,8 @@ function UniversitiesInner() {
     reloadSchools();
   }, [reloadSchools]);
 
-  const list = universities.filter((u) => !archived.includes(u.id) && u.name.toLowerCase().includes(q.toLowerCase()));
+  const list = universities.filter((u) => !u.archived && u.name.toLowerCase().includes(q.toLowerCase()));
+  const archivedList = universities.filter((u) => u.archived && u.name.toLowerCase().includes(q.toLowerCase()));
 
   return (
     <PageContainer>
@@ -401,10 +402,15 @@ function UniversitiesInner() {
                         <DropdownMenuItem onSelect={() => toast.success("Template update pushed", { description: u.short })}>Push template update</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          variant="destructive"
                           onSelect={() => {
-                            setArchived((a) => [...a, u.id]);
-                            toast(`${u.short} archived`, { action: { label: "Undo", onClick: () => setArchived((a) => a.filter((x) => x !== u.id)) } });
+                            void setSchoolArchived(u.id, true)
+                              .then(() => {
+                                toast.success(`${u.short} archived`, {
+                                  description: "Hidden from active lists. Records stay available below.",
+                                });
+                                reloadSchools();
+                              })
+                              .catch((err) => toast.error(err instanceof Error ? err.message : "Could not archive"));
                           }}
                         >
                           Archive
@@ -418,6 +424,38 @@ function UniversitiesInner() {
           </TableBody>
         </Table>
       </div>
+      {archivedList.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-[15px] font-semibold">Archived ({archivedList.length})</h2>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Delisted schools stay on record. Students and invites are kept, but the school is not treated as active.
+          </p>
+          <div className="mt-3 divide-y rounded-xl border">
+            {archivedList.map((u) => (
+              <div key={u.id} className="flex items-center justify-between gap-3 px-4 py-3 text-[13.5px]">
+                <div>
+                  <div className="font-medium">{u.short}</div>
+                  <div className="text-[12.5px] text-muted-foreground">{u.name}</div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    void setSchoolArchived(u.id, false)
+                      .then(() => {
+                        toast.success(`${u.short} restored`);
+                        reloadSchools();
+                      })
+                      .catch((err) => toast.error(err instanceof Error ? err.message : "Could not restore"));
+                  }}
+                >
+                  Restore
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <NewUniversitySheet open={open} onOpenChange={setOpen} onCreated={reloadSchools} />
       <FormSheet config={form} onClose={() => setForm(null)} />
     </PageContainer>

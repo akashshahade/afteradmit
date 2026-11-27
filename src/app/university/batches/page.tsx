@@ -4,14 +4,14 @@ import * as React from "react";
 import { toast } from "sonner";
 import { Check, Layers, Pencil, Plus, Star } from "lucide-react";
 
-import { cn, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DateField } from "@/components/ui/date-field";
 import { PageContainer, PageHeader } from "@/components/shell/app-shell";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -185,10 +185,7 @@ export default function UniversityBatchesPage() {
         {batches.map((b) => (
             <Card
               key={b.id}
-              className={cn(
-                "overflow-hidden border-[#e8e8ec] shadow-sm",
-                b.is_active && "border-l-[3px] border-l-primary ring-1 ring-primary/10",
-              )}
+              className="overflow-hidden border-[#e8e8ec] shadow-sm"
             >
             <CardHeader className="flex flex-row items-start justify-between gap-4 border-b">
               <div>
@@ -252,15 +249,15 @@ export default function UniversityBatchesPage() {
         ))}
       </div>
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>{form.id ? "Edit batch" : "New batch"}</SheetTitle>
-            <SheetDescription>
+      {open && (
+        <Card className="mt-6">
+          <CardHeader className="border-b">
+            <CardTitle>{form.id ? "Edit batch" : "New batch"}</CardTitle>
+            <CardDescription>
               Program start drives the student countdown. Other deadlines help you track admissions readiness.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6 space-y-4 px-1">
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 p-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="batch-name">Cohort name</Label>
               <Input
@@ -278,34 +275,28 @@ export default function UniversityBatchesPage() {
                 onChange={(e) => setForm((f) => ({ ...f, program: e.target.value }))}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => setForm((f) => ({ ...f, status: v as BatchStatus }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(BATCH_STATUS_LABEL) as BatchStatus[]).map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {BATCH_STATUS_LABEL[s]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="program-start">Program start</Label>
-                <Input
-                  id="program-start"
-                  type="date"
-                  value={form.program_start}
-                  onChange={(e) => setForm((f) => ({ ...f, program_start: e.target.value }))}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v as BatchStatus }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(BATCH_STATUS_LABEL) as BatchStatus[]).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {BATCH_STATUS_LABEL[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="program-start">Program start</Label>
+              <DateField
+                id="program-start"
+                value={form.program_start}
+                onChange={(value) => setForm((f) => ({ ...f, program_start: value }))}
+              />
             </div>
             {(
               [
@@ -318,24 +309,19 @@ export default function UniversityBatchesPage() {
             ).map(([key, label]) => (
               <div key={key} className="space-y-2">
                 <Label htmlFor={key}>{label}</Label>
-                <Input
-                  id={key}
-                  type="date"
-                  value={form[key]}
-                  onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                />
+                <DateField id={key} value={form[key]} onChange={(value) => setForm((f) => ({ ...f, [key]: value }))} />
               </div>
             ))}
-            <label className="flex items-center gap-2 rounded-lg border px-3 py-2.5 text-[13px]">
+            <label className="flex items-center gap-2 rounded-lg border px-3 py-2.5 text-[13px] sm:col-span-2">
               <input
                 type="checkbox"
                 checked={form.is_active}
                 onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
                 className="size-4 rounded border"
               />
-              Set as active batch for invites & overview
+              Set as the active batch for new invites
             </label>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 sm:col-span-2">
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
@@ -343,9 +329,9 @@ export default function UniversityBatchesPage() {
                 {saving ? "Saving…" : "Save batch"}
               </Button>
             </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          </CardContent>
+        </Card>
+      )}
     </PageContainer>
   );
 }

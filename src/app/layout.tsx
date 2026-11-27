@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "sonner";
 
+import { RememberSessionGate } from "@/components/auth/remember-session-gate";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable} h-full`}>
       <body className="min-h-full">
         <TooltipProvider>{children}</TooltipProvider>
+        <RememberSessionGate />
         <Toaster
           position="bottom-right"
           toastOptions={{ className: "!rounded-xl !border-border !shadow-lg !text-[13px] !font-sans" }}

@@ -92,6 +92,8 @@ export default function StudentDashboard() {
         </Button>
       </div>
 
+      <FirstStudentGuide firstName={firstName} nextTitle={upNext[0]?.title} />
+
       <Card data-tour="journey" className="mt-6 overflow-hidden shadow-sm sm:mt-7">
         <div className="grid md:grid-cols-[minmax(0,1fr)_280px]">
           <div className="p-5 sm:p-7">
@@ -233,5 +235,39 @@ export default function StudentDashboard() {
         </Card>
       </div>
     </PageContainer>
+  );
+}
+
+function FirstStudentGuide({ firstName, nextTitle }: { firstName: string; nextTitle?: string }) {
+  const [open, setOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (!localStorage.getItem("aa-student-guided")) setOpen(true);
+  }, []);
+  if (!open) return null;
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>Welcome, {firstName}. Here is how AfterAdmit works.</CardTitle>
+        <CardDescription>
+          Your university invited you. This is your private checklist from admit to arrival. Your school only sees overall progress, not every click.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[13.5px] text-muted-foreground">
+        <p>1. Finish the items on your roadmap. {nextTitle ? `Start with “${nextTitle}”.` : "Start with the first open milestone."}</p>
+        <p>2. Deadlines come from your school’s batch, so the dates are the ones they set.</p>
+        <p>3. Community and marketplace are optional. Join a space only if you want classmates or vetted services.</p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-2"
+          onClick={() => {
+            localStorage.setItem("aa-student-guided", "1");
+            setOpen(false);
+          }}
+        >
+          I understand
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

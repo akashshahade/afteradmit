@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Clock, Eye, EyeOff, ShieldAlert } 
 
 import { Logo } from "@/components/brand/logo";
 import { ForgotPasswordButton, friendlyAuthError } from "@/components/auth/forgot-password-button";
+import { AuthPortalLinks, rememberThisDevice } from "@/components/auth/auth-portal-links";
 import { PasswordChecklist } from "@/components/auth/password-checklist";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -78,6 +79,7 @@ function UniversityLoginForm() {
   const [password, setPassword] = React.useState("");
   const [agreeTerms, setAgreeTerms] = React.useState(true);
   const [show, setShow] = React.useState(false);
+  const [remember, setRemember] = React.useState(true);
 
   // Step 2: University profile
   const [schoolName, setSchoolName] = React.useState("");
@@ -114,6 +116,7 @@ function UniversityLoginForm() {
         password,
       });
       if (error) throw error;
+      rememberThisDevice(remember);
 
       const { data: profile, error: profileError } = await supabase.rpc("get_my_profile");
       if (profileError) throw profileError;
@@ -382,6 +385,10 @@ function UniversityLoginForm() {
                     </button>
                   </div>
                 </div>
+                <label className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+                  <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="size-3.5 rounded border" />
+                  Keep me signed in on this device
+                </label>
                 <Button type="submit" variant="ink" size="lg" className="w-full" disabled={loading}>
                   {loading ? "Signing in…" : "Sign in"}
                   {!loading && <ArrowRight className="size-4" />}
@@ -621,6 +628,7 @@ function UniversityLoginForm() {
               </p>
             </>
           )}
+          <AuthPortalLinks />
         </div>
 
         <div className="flex items-center justify-between text-[12px] text-subtle">

@@ -9,6 +9,7 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
 import { ForgotPasswordButton, friendlyAuthError } from "@/components/auth/forgot-password-button";
+import { AuthPortalLinks, rememberThisDevice } from "@/components/auth/auth-portal-links";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +49,7 @@ function LoginForm() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [show, setShow] = React.useState(false);
+  const [remember, setRemember] = React.useState(true);
   const [loading, setLoading] = React.useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -65,6 +67,7 @@ function LoginForm() {
         password,
       });
       if (error) throw error;
+      rememberThisDevice(remember);
 
       const {
         data: { user },
@@ -159,6 +162,10 @@ function LoginForm() {
                 </button>
               </div>
             </div>
+            <label className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="size-3.5 rounded border" />
+              Keep me signed in on this device
+            </label>
             <Button type="submit" variant="ink" size="lg" className="w-full" disabled={loading}>
               {loading ? "Signing in…" : "Sign in"}
               {!loading && <ArrowRight className="size-4" />}
@@ -189,6 +196,7 @@ function LoginForm() {
               Admin
             </Link>
           </p>
+          <AuthPortalLinks />
         </div>
 
         <div className="flex items-center justify-between text-[12px] text-subtle">
